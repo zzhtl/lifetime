@@ -9,21 +9,37 @@
 
 use anyhow::Result;
 
-pub fn send_notification(title: &str, body: &str) -> Result<()> {
+#[cfg(not(target_os = "windows"))]
+pub type DesktopNotification = notify_rust::NotificationHandle;
+
+#[cfg(target_os = "windows")]
+pub type DesktopNotification = ();
+
+pub fn send_notification(title: &str, body: &str) -> Result<Option<DesktopNotification>> {
     // notify-rust 在不同平台行为略有差异；这里统一捕获错误
-    let res = notify_rust::Notification::new()
-        .summary(title)
+    let mut n = notify_rust::Notification::new();
+    n.summary(title)
         .body(body)
         .appname("Lifetime")
         // freedesktop 标准图标名：Linux 下显示信息图标，其它平台安全忽略
         .icon("dialog-information")
-        .timeout(notify_rust::Timeout::Milliseconds(5_000))
-        .show();
+        .timeout(notify_rust::Timeout::Milliseconds(5_000));
+    // Linux/BSD：用 Critical 紧急级。GNOME 等桌面对“普通级 + 当前焦点应用”会压制横幅，
+    // 导致点击应用内按钮（此时 Lifetime 处于焦点）看不到弹窗；Critical 不受焦点/勿扰限制。
+    #[cfg(all(unix, not(target_os = "macos")))]
+    n.urgency(notify_rust::Urgency::Critical);
+
+    #[cfg(target_os = "windows")]
+    let res = n.show().map(|()| None);
+
+    #[cfg(not(target_os = "windows"))]
+    let res = n.show().map(Some);
+
     match res {
-        Ok(_) => Ok(()),
+        Ok(handle) => Ok(handle),
         Err(e) => {
             log::warn!("桌面通知失败: {e}");
-            Ok(())
+            Ok(None)
         }
     }
 }
