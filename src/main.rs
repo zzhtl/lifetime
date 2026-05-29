@@ -9,6 +9,7 @@ mod db;
 mod notify;
 mod reminders;
 mod scheduler;
+mod shortcut;
 mod stats;
 mod tips;
 mod ui;
@@ -20,6 +21,9 @@ fn main() -> Result<()> {
 
     let cfg = config::load_or_default()?;
     log::info!("配置加载完成: {:?}", cfg.paths.data_dir);
+
+    // 运行时确保桌面快捷方式存在（路径变化才覆盖）
+    shortcut::ensure(&cfg.paths.data_dir);
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
