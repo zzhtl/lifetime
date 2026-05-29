@@ -8,7 +8,6 @@ use std::time::Duration;
 
 use crate::config::Config;
 use crate::db::{self, Db, DailySummary, ReminderAction};
-use crate::notify::Notifier;
 use crate::reminders::ReminderKind;
 use crate::scheduler::{self, Command, RunState, SchedulerEvent, SchedulerHandle};
 use crate::stats::StatsView;
@@ -31,7 +30,6 @@ pub struct App {
     pub db: Db,
     pub tips: Library,
     pub sched: SchedulerHandle,
-    pub notifier: Notifier,
 
     pub view: View,
     pub run_state: RunState,
@@ -63,7 +61,6 @@ impl App {
             db,
             tips,
             sched,
-            notifier: Notifier::new(),
             view: View::Dashboard,
             run_state: RunState::Idle,
             running_secs: 0,
@@ -123,23 +120,16 @@ impl App {
         }
         let _ = db::upsert_today(&self.db, &self.today);
 
-        // 强度处理：Strong → 弹模态窗；其他 → 通知 + 声音
-        let (cfg_notify, cfg_sound, cfg_volume, big_break_secs, skip_cd) = {
-            let cfg = self.config.lock().unwrap();
-            (
-                cfg.general.desktop_notify,
-                cfg.general.sound_enabled,
-                cfg.general.volume,
-                cfg.reminders.big_break_duration_sec,
-                cfg.general.skip_cooldown_sec,
-            )
-        };
-
+        // 桌面通知与声音已由调度线程发出（保证窗口最小化/失焦时也能提醒）；
+        // UI 线程这里只负责大休息的全屏模态窗。
         if kind == ReminderKind::BigBreak {
-            // 大休息：模态 + 声音；不发桌面通知（避免双重打扰）
-            if cfg_sound {
-                self.notifier.beep(kind.intensity(), cfg_volume);
-            }
+            let (big_break_secs, skip_cd) = {
+                let cfg = self.config.lock().unwrap();
+                (
+                    cfg.reminders.big_break_duration_sec,
+                    cfg.general.skip_cooldown_sec,
+                )
+            };
             let tip = kind
                 .tip_category()
                 .and_then(|c| self.tips.random_for_category(c));
@@ -152,8 +142,6 @@ impl App {
                 tip_steps: tip.map(|t| t.steps.clone()).unwrap_or_default(),
                 tip_benefit: tip.map(|t| t.benefit.clone()).unwrap_or_default(),
             });
-        } else {
-            self.notifier.dispatch(kind, cfg_notify, cfg_sound, cfg_volume);
         }
 
         self.last_reminder = Some((kind, Local::now()));

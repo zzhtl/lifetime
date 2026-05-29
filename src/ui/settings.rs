@@ -98,9 +98,14 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
         // 二、通知与音效
         ui.label(RichText::new("通知与音效").strong());
         ui.add_space(4.0);
-        if ui.checkbox(&mut cfg.general.desktop_notify, "桌面通知").changed() {
-            dirty = true;
-        }
+        ui.horizontal(|ui| {
+            if ui.checkbox(&mut cfg.general.desktop_notify, "桌面通知").changed() {
+                dirty = true;
+            }
+            if ui.button("🔔 测试通知").clicked() {
+                app.send(crate::scheduler::Command::TestNotify);
+            }
+        });
         if ui.checkbox(&mut cfg.general.sound_enabled, "声音提示").changed() {
             dirty = true;
         }
@@ -110,10 +115,7 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
                 dirty = true;
             }
             if ui.button("🔊 试听").clicked() {
-                app.notifier.beep(
-                    crate::reminders::Intensity::Medium,
-                    cfg.general.volume,
-                );
+                app.send(crate::scheduler::Command::TestSound);
             }
         });
 

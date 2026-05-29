@@ -8,13 +8,12 @@
 //   - 时间点型（午餐/睡眠）按本地时钟 HH:MM 匹配，每天只触发一次。
 
 use chrono::{Local, NaiveTime, Timelike};
-use crossbeam_channel::Sender;
 use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::config::{parse_hhmm, Config};
 use crate::reminders::ReminderKind;
-use crate::scheduler::event::{Command, RunState, SchedulerEvent};
+use crate::scheduler::event::{ApplyOutcome, Command, RunState, TickOutcome};
 
 /// 番茄钟阶段
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,7 +54,8 @@ impl Engine {
         }
     }
 
-    pub fn apply(&mut self, cmd: Command, cfg: &Config, tx: &Sender<SchedulerEvent>) {
+    pub fn apply(&mut self, cmd: Command, cfg: &Config) -> ApplyOutcome {
+        let mut out = ApplyOutcome::default();
         match cmd {
             Command::Start => {
                 if self.state == RunState::Idle {
@@ -67,25 +67,25 @@ impl Engine {
                     self.off_work_fired_date = None;
                 }
                 self.state = RunState::Running;
-                let _ = tx.send(SchedulerEvent::StateChanged(self.state));
+                out.state_changed = Some(self.state);
             }
             Command::Pause => {
                 if self.state == RunState::Running {
                     self.state = RunState::Paused;
-                    let _ = tx.send(SchedulerEvent::StateChanged(self.state));
+                    out.state_changed = Some(self.state);
                 }
             }
             Command::Resume => {
                 if self.state == RunState::Paused {
                     self.state = RunState::Running;
-                    let _ = tx.send(SchedulerEvent::StateChanged(self.state));
+                    out.state_changed = Some(self.state);
                 }
             }
             Command::Stop => {
                 self.state = RunState::Idle;
                 self.running_secs = 0;
                 self.big_break_secs = 0;
-                let _ = tx.send(SchedulerEvent::StateChanged(self.state));
+                out.state_changed = Some(self.state);
             }
             Command::Skip(kind) => {
                 self.last_fire.insert(kind, self.running_secs);
@@ -112,15 +112,18 @@ impl Engine {
                 }
             }
             Command::TriggerNow(kind) => {
-                let _ = tx.send(SchedulerEvent::Triggered(kind));
+                out.triggered = Some(kind);
             }
-            Command::Quit => {}
+            // 测试类指令不影响调度状态，由 run_loop 直接处理副作用
+            Command::TestSound | Command::TestNotify | Command::Quit => {}
         }
+        out
     }
 
-    pub fn tick(&mut self, _now: Instant, cfg: &Config, tx: &Sender<SchedulerEvent>) {
+    pub fn tick(&mut self, _now: Instant, cfg: &Config) -> TickOutcome {
+        let mut out = TickOutcome::default();
         if self.state != RunState::Running {
-            return;
+            return out;
         }
 
         self.running_secs += 1;
@@ -129,9 +132,7 @@ impl Engine {
         // 心跳每 5 秒上报，减小 channel 流量
         if self.running_secs.saturating_sub(self.last_heartbeat) >= 5 {
             self.last_heartbeat = self.running_secs;
-            let _ = tx.send(SchedulerEvent::Heartbeat {
-                running_secs: self.running_secs,
-            });
+            out.heartbeat = Some(self.running_secs);
         }
 
         let in_quiet = in_quiet_hours(&cfg.general.quiet_start, &cfg.general.quiet_end);
@@ -153,7 +154,7 @@ impl Engine {
             let last = self.last_fire.get(&kind).copied().unwrap_or(0);
             if self.running_secs.saturating_sub(last) >= interval {
                 self.last_fire.insert(kind, self.running_secs);
-                let _ = tx.send(SchedulerEvent::Triggered(kind));
+                out.triggered.push(kind);
             }
         }
 
@@ -175,7 +176,7 @@ impl Engine {
             if self.running_secs.saturating_sub(last) >= interval {
                 self.last_fire.insert(cur_kind, self.running_secs);
                 self.phase = target_phase;
-                let _ = tx.send(SchedulerEvent::Triggered(cur_kind));
+                out.triggered.push(cur_kind);
             }
         }
 
@@ -185,7 +186,7 @@ impl Engine {
         {
             self.big_break_secs = 0;
             self.last_fire.insert(ReminderKind::BigBreak, self.running_secs);
-            let _ = tx.send(SchedulerEvent::Triggered(ReminderKind::BigBreak));
+            out.triggered.push(ReminderKind::BigBreak);
         }
 
         // 4) 时间点型：午餐 / 睡眠（按本地时钟）
@@ -198,7 +199,7 @@ impl Engine {
             &today,
             now_time,
             &mut self.fired_today,
-            tx,
+            &mut out.triggered,
         );
         check_time_point(
             ReminderKind::Sleep,
@@ -207,7 +208,7 @@ impl Engine {
             &today,
             now_time,
             &mut self.fired_today,
-            tx,
+            &mut out.triggered,
         );
 
         // 5) 累计型：工作满 8h 提醒下班
@@ -216,8 +217,10 @@ impl Engine {
             && self.off_work_fired_date.as_deref() != Some(&today)
         {
             self.off_work_fired_date = Some(today.clone());
-            let _ = tx.send(SchedulerEvent::Triggered(ReminderKind::OffWork));
+            out.triggered.push(ReminderKind::OffWork);
         }
+
+        out
     }
 
     #[allow(dead_code)]
@@ -233,7 +236,7 @@ fn check_time_point(
     today: &str,
     now: NaiveTime,
     fired: &mut HashMap<(ReminderKind, String), ()>,
-    tx: &Sender<SchedulerEvent>,
+    triggered: &mut Vec<ReminderKind>,
 ) {
     if !enabled {
         return;
@@ -246,7 +249,7 @@ fn check_time_point(
         let key = (kind, today.to_string());
         if !fired.contains_key(&key) {
             fired.insert(key, ());
-            let _ = tx.send(SchedulerEvent::Triggered(kind));
+            triggered.push(kind);
         }
     }
 }
@@ -292,30 +295,28 @@ mod tests {
 
     #[test]
     fn idle_state_no_tick() {
-        let (tx, rx) = crossbeam_channel::unbounded();
         let mut e = Engine::new();
         let cfg = fast_cfg();
         for _ in 0..100 {
-            e.tick(Instant::now(), &cfg, &tx);
+            let out = e.tick(Instant::now(), &cfg);
+            assert!(out.triggered.is_empty());
+            assert!(out.heartbeat.is_none());
         }
-        assert!(rx.try_recv().is_err());
     }
 
     #[test]
     fn start_then_eyes_fires_after_interval() {
-        let (tx, rx) = crossbeam_channel::unbounded();
         let mut e = Engine::new();
         let cfg = fast_cfg();
-        e.apply(Command::Start, &cfg, &tx);
-        // 消费 StateChanged
-        let _ = rx.recv();
-        for _ in 0..3 {
-            e.tick(Instant::now(), &cfg, &tx);
-        }
+        let out = e.apply(Command::Start, &cfg);
+        assert_eq!(out.state_changed, Some(RunState::Running));
         // 期望至少出现一次 Eyes
         let mut got_eyes = false;
-        while let Ok(ev) = rx.try_recv() {
-            if let SchedulerEvent::Triggered(ReminderKind::Eyes) = ev {
+        for _ in 0..3 {
+            if e.tick(Instant::now(), &cfg)
+                .triggered
+                .contains(&ReminderKind::Eyes)
+            {
                 got_eyes = true;
             }
         }
@@ -324,16 +325,15 @@ mod tests {
 
     #[test]
     fn big_break_independent_of_other_intervals() {
-        let (tx, rx) = crossbeam_channel::unbounded();
         let mut e = Engine::new();
         let cfg = fast_cfg();
-        e.apply(Command::Start, &cfg, &tx);
-        for _ in 0..cfg.reminders.big_break_interval_sec {
-            e.tick(Instant::now(), &cfg, &tx);
-        }
+        e.apply(Command::Start, &cfg);
         let mut got_big = false;
-        while let Ok(ev) = rx.try_recv() {
-            if let SchedulerEvent::Triggered(ReminderKind::BigBreak) = ev {
+        for _ in 0..cfg.reminders.big_break_interval_sec {
+            if e.tick(Instant::now(), &cfg)
+                .triggered
+                .contains(&ReminderKind::BigBreak)
+            {
                 got_big = true;
             }
         }
@@ -342,17 +342,16 @@ mod tests {
 
     #[test]
     fn pause_freezes_running_secs() {
-        let (tx, _rx) = crossbeam_channel::unbounded();
         let mut e = Engine::new();
         let cfg = fast_cfg();
-        e.apply(Command::Start, &cfg, &tx);
+        e.apply(Command::Start, &cfg);
         for _ in 0..5 {
-            e.tick(Instant::now(), &cfg, &tx);
+            e.tick(Instant::now(), &cfg);
         }
-        e.apply(Command::Pause, &cfg, &tx);
+        e.apply(Command::Pause, &cfg);
         let snapshot = e.running_secs();
         for _ in 0..10 {
-            e.tick(Instant::now(), &cfg, &tx);
+            e.tick(Instant::now(), &cfg);
         }
         assert_eq!(e.running_secs(), snapshot);
     }
