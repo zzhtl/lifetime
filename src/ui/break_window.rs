@@ -24,8 +24,8 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
     let viewport_id = egui::ViewportId::from_hash_of("lifetime-break");
     let builder = egui::ViewportBuilder::default()
         .with_title("Lifetime · 该休息了")
-        .with_inner_size([700.0, 460.0])
-        .with_min_inner_size([520.0, 360.0])
+        .with_inner_size([760.0, 620.0])
+        .with_min_inner_size([620.0, 500.0])
         .with_always_on_top()
         .with_decorations(true)
         .with_maximized(false);
@@ -39,9 +39,14 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
         }
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(Color32::from_rgb(20, 24, 40)))
+            .frame(
+                egui::Frame::none()
+                    .fill(Color32::from_rgb(20, 24, 40))
+                    .inner_margin(24.0),
+            )
             .show(ctx, |ui| {
-                ui.add_space(20.0);
+                let content_width = ui.available_width().clamp(480.0, 640.0);
+
                 ui.vertical_centered(|ui| {
                     ui.label(
                         RichText::new(format!("{} · 该休息了", kind.label()))
@@ -55,7 +60,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                     let s = remaining % 60;
                     ui.label(
                         RichText::new(format!("{m:02}:{s:02}"))
-                            .size(72.0)
+                            .size(68.0)
                             .monospace()
                             .strong()
                             .color(Color32::from_rgb(180, 230, 255)),
@@ -64,71 +69,106 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                     let ratio = (total - remaining) as f32 / total as f32;
                     ui.add(
                         egui::ProgressBar::new(ratio.clamp(0.0, 1.0))
-                            .desired_width(420.0)
+                            .desired_width(content_width.min(460.0))
                             .text(""),
                     );
 
-                    ui.add_space(20.0);
+                    ui.add_space(18.0);
+
+                    let card_height = (ui.available_height() - 104.0).max(220.0);
 
                     egui::Frame::none()
                         .fill(Color32::from_rgb(34, 40, 60))
+                        .stroke(egui::Stroke::new(1.0, Color32::from_rgb(54, 64, 88)))
                         .rounding(10.0)
-                        .inner_margin(16.0)
+                        .inner_margin(18.0)
                         .show(ui, |ui| {
-                            ui.set_width(520.0);
-                            // 卡片内统一左对齐，长文本自动换行，避免居中换行难读 / 被截断
-                            ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
-                                ui.label(
-                                    RichText::new(&title)
-                                        .size(18.0)
-                                        .strong()
-                                        .color(Color32::from_rgb(255, 230, 180)),
-                                );
-                                ui.add_space(6.0);
-                                if steps.is_empty() {
-                                    ui.label(
-                                        RichText::new(kind.brief()).color(Color32::LIGHT_GRAY),
-                                    );
-                                } else {
-                                    for (i, step) in steps.iter().enumerate() {
-                                        ui.horizontal_top(|ui| {
-                                            ui.label(
-                                                RichText::new(format!("{}.", i + 1))
-                                                    .monospace()
+                            ui.set_width(content_width);
+                            ui.set_min_height(card_height);
+
+                            egui::ScrollArea::vertical()
+                                .max_height(card_height)
+                                .auto_shrink([false, false])
+                                .show(ui, |ui| {
+                                    ui.set_width(ui.available_width());
+                                    // 卡片内统一左对齐；内容超高时滚动，避免底部文字被裁掉
+                                    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                                        ui.add(
+                                            egui::Label::new(
+                                                RichText::new(&title)
+                                                    .size(18.0)
                                                     .strong()
-                                                    .color(Color32::from_rgb(180, 230, 255)),
-                                            );
-                                            ui.add_space(2.0);
+                                                    .color(Color32::from_rgb(255, 230, 180)),
+                                            )
+                                            .wrap(),
+                                        );
+                                        ui.add_space(8.0);
+                                        if steps.is_empty() {
                                             ui.add(
                                                 egui::Label::new(
-                                                    RichText::new(step)
-                                                        .color(Color32::from_rgb(220, 230, 240))
-                                                        .size(15.0),
+                                                    RichText::new(kind.brief())
+                                                        .color(Color32::LIGHT_GRAY),
                                                 )
                                                 .wrap(),
                                             );
-                                        });
-                                    }
-                                }
-                                if !benefit.is_empty() {
-                                    ui.add_space(6.0);
-                                    ui.add(
-                                        egui::Label::new(
-                                            RichText::new(format!("💡 {benefit}"))
-                                                .italics()
-                                                .color(Color32::from_rgb(150, 220, 150)),
-                                        )
-                                        .wrap(),
-                                    );
-                                }
-                            });
+                                        } else {
+                                            for (i, step) in steps.iter().enumerate() {
+                                                ui.horizontal_top(|ui| {
+                                                    ui.set_width(ui.available_width());
+                                                    ui.label(
+                                                        RichText::new(format!("{}.", i + 1))
+                                                            .monospace()
+                                                            .strong()
+                                                            .color(Color32::from_rgb(180, 230, 255)),
+                                                    );
+                                                    ui.add_space(4.0);
+                                                    let text_width = ui.available_width().max(120.0);
+                                                    ui.allocate_ui_with_layout(
+                                                        egui::vec2(text_width, 0.0),
+                                                        egui::Layout::top_down(egui::Align::Min),
+                                                        |ui| {
+                                                            ui.set_width(text_width);
+                                                            ui.add(
+                                                                egui::Label::new(
+                                                                    RichText::new(step)
+                                                                        .color(Color32::from_rgb(
+                                                                            220, 230, 240,
+                                                                        ))
+                                                                        .size(15.0),
+                                                                )
+                                                                .wrap(),
+                                                            );
+                                                        },
+                                                    );
+                                                });
+                                                ui.add_space(4.0);
+                                            }
+                                        }
+                                        if !benefit.is_empty() {
+                                            ui.add_space(8.0);
+                                            ui.separator();
+                                            ui.add_space(8.0);
+                                            ui.add(
+                                                egui::Label::new(
+                                                    RichText::new(format!("💡 {benefit}"))
+                                                        .italics()
+                                                        .color(Color32::from_rgb(150, 220, 150)),
+                                                )
+                                                .wrap(),
+                                            );
+                                        }
+                                    });
+                                });
                         });
 
-                    ui.add_space(20.0);
+                    ui.add_space(18.0);
 
                     // 跳过 / 完成按钮
                     ui.horizontal(|ui| {
-                        ui.add_space(120.0);
+                        let button_width = 140.0;
+                        let button_gap = 20.0;
+                        let buttons_width = button_width * 2.0 + button_gap;
+                        ui.add_space(((ui.available_width() - buttons_width) / 2.0).max(0.0));
                         let skip_label = if skip_left > 0 {
                             format!("⏭ 跳过 (再 {} s)", skip_left)
                         } else {
@@ -137,7 +177,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                         let skip_btn = ui.add_enabled(
                             skip_left == 0,
                             egui::Button::new(RichText::new(skip_label).size(14.0))
-                                .min_size(egui::vec2(140.0, 36.0)),
+                                .min_size(egui::vec2(button_width, 36.0)),
                         );
                         if skip_btn.clicked() {
                             close_requested = true;
@@ -149,7 +189,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                         if ui
                             .add(
                                 egui::Button::new(RichText::new("✅ 完成").size(14.0).strong())
-                                    .min_size(egui::vec2(140.0, 36.0)),
+                                    .min_size(egui::vec2(button_width, 36.0)),
                             )
                             .clicked()
                         {
