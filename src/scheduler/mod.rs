@@ -10,6 +10,8 @@ pub use rules::Engine;
 
 use anyhow::Result;
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender};
+use rand::seq::SliceRandom;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -17,6 +19,10 @@ use std::time::{Duration, Instant};
 use crate::config::Config;
 use crate::notify::Notifier;
 use crate::reminders::{Intensity, ReminderKind};
+use crate::tips::Library;
+
+/// 通知正文轮换缓存：类目 key → 上次用过的标题（避免紧邻重复）
+type TipRotation = HashMap<&'static str, String>;
 
 /// 调度器对外句柄
 pub struct SchedulerHandle {
@@ -46,6 +52,9 @@ fn run_loop(
     // 通知与音效在调度线程内构造并发出，这样窗口最小化/失焦时也能可靠提醒，
     // 不再依赖 UI 线程的重绘循环（rodio 的音频流非 Send，必须留在本线程）。
     let notifier = Notifier::new();
+    // 健康库在调度线程内一次解析，用于轮换桌面通知正文（具体动作/小贴士）
+    let tips = Library::load().unwrap_or_default();
+    let mut rotation: TipRotation = HashMap::new();
     let tick = Duration::from_secs(1);
     let mut last_tick = Instant::now();
 
@@ -54,12 +63,12 @@ fn run_loop(
         let timeout = tick.saturating_sub(last_tick.elapsed());
         match cmd_rx.recv_timeout(timeout) {
             Ok(cmd) => {
-                if process_command(cmd, &mut engine, &config, &notifier, &evt_tx) {
+                if process_command(cmd, &mut engine, &config, &notifier, &evt_tx, &tips, &mut rotation) {
                     return; // 收到 Quit
                 }
                 // 排空同一时刻积压的其余命令
                 while let Ok(cmd) = cmd_rx.try_recv() {
-                    if process_command(cmd, &mut engine, &config, &notifier, &evt_tx) {
+                    if process_command(cmd, &mut engine, &config, &notifier, &evt_tx, &tips, &mut rotation) {
                         return;
                     }
                 }
@@ -77,7 +86,7 @@ fn run_loop(
                 let _ = evt_tx.send(SchedulerEvent::Heartbeat { running_secs });
             }
             for kind in out.triggered {
-                fire(kind, &cfg, &notifier, &evt_tx);
+                fire(kind, &cfg, &notifier, &evt_tx, &tips, &mut rotation);
             }
         }
     }
@@ -90,6 +99,8 @@ fn process_command(
     config: &Arc<Mutex<Config>>,
     notifier: &Notifier,
     evt_tx: &Sender<SchedulerEvent>,
+    tips: &Library,
+    rotation: &mut TipRotation,
 ) -> bool {
     let cfg = config.lock().unwrap().clone();
     match cmd {
@@ -97,14 +108,20 @@ fn process_command(
         // 试听：仅出声
         Command::TestSound => notifier.beep(Intensity::Medium, cfg.general.volume),
         // 测试通知：强制发一条示例桌面通知 + 声音，用于即时验证系统通知是否可用
-        Command::TestNotify => notifier.dispatch(ReminderKind::Eyes, true, true, cfg.general.volume),
+        Command::TestNotify => notifier.dispatch(
+            ReminderKind::Eyes,
+            ReminderKind::Eyes.brief(),
+            true,
+            true,
+            cfg.general.volume,
+        ),
         other => {
             let out = engine.apply(other, &cfg);
             if let Some(state) = out.state_changed {
                 let _ = evt_tx.send(SchedulerEvent::StateChanged(state));
             }
             if let Some(kind) = out.triggered {
-                fire(kind, &cfg, notifier, evt_tx);
+                fire(kind, &cfg, notifier, evt_tx, tips, rotation);
             }
         }
     }
@@ -112,7 +129,14 @@ fn process_command(
 }
 
 /// 一次提醒触发：在调度线程直接发出桌面通知 / 声音，同时通知 UI 线程更新统计与模态
-fn fire(kind: ReminderKind, cfg: &Config, notifier: &Notifier, evt_tx: &Sender<SchedulerEvent>) {
+fn fire(
+    kind: ReminderKind,
+    cfg: &Config,
+    notifier: &Notifier,
+    evt_tx: &Sender<SchedulerEvent>,
+    tips: &Library,
+    rotation: &mut TipRotation,
+) {
     // 交给 UI 线程：DB 记录、当日计数、大休息模态窗
     let _ = evt_tx.send(SchedulerEvent::Triggered(kind));
 
@@ -125,7 +149,38 @@ fn fire(kind: ReminderKind, cfg: &Config, notifier: &Notifier, evt_tx: &Sender<S
             notifier.beep(kind.intensity(), volume);
         }
     } else {
-        notifier.dispatch(kind, desktop_on, sound_on, volume);
+        let body = pick_notify_body(tips, rotation, kind);
+        notifier.dispatch(kind, &body, desktop_on, sound_on, volume);
+    }
+}
+
+/// 为提醒挑一条轮换正文：从对应类目随机取一条 tip（标题 + 首步），避免与上次重复；
+/// 没有类目或库为空时退回 kind.brief()，保证总有正文。
+fn pick_notify_body(tips: &Library, rotation: &mut TipRotation, kind: ReminderKind) -> String {
+    let Some(cat) = kind.tip_category() else {
+        return kind.brief().to_string();
+    };
+    let list = tips.by_category_key(cat);
+    if list.is_empty() {
+        return kind.brief().to_string();
+    }
+    let mut rng = rand::thread_rng();
+    let prev = rotation.get(cat).cloned();
+    // 类目内多于一条时，尽量避开上次用过的标题
+    let chosen = if list.len() > 1 {
+        loop {
+            let t = *list.choose(&mut rng).unwrap();
+            if prev.as_deref() != Some(t.title.as_str()) {
+                break t;
+            }
+        }
+    } else {
+        *list.choose(&mut rng).unwrap()
+    };
+    rotation.insert(cat, chosen.title.clone());
+    match chosen.steps.first() {
+        Some(step) => format!("{} —— {}", chosen.title, step),
+        None => chosen.title.clone(),
     }
 }
 
@@ -142,6 +197,8 @@ mod tests {
         cfg.reminders.eyes_interval_sec = 1;
         cfg.general.quiet_start = "00:00".into();
         cfg.general.quiet_end = "00:00".into();
+        // 关闭错开，验证"到点即触发"的基础链路
+        cfg.general.min_notify_gap_sec = 0;
         // 测试中不弹真实系统通知、不出声，只验证触发链路
         cfg.general.desktop_notify = false;
         cfg.general.sound_enabled = false;

@@ -133,6 +133,24 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
         });
 
         ui.add_space(12.0);
+        ui.label(RichText::new("通知最小间隔（微提醒错开，0=不限）").strong());
+        ui.horizontal(|ui| {
+            let mut gap = (cfg.general.min_notify_gap_sec / 60) as u32;
+            if ui
+                .add(egui::DragValue::new(&mut gap).range(0..=30).suffix(" 分钟"))
+                .changed()
+            {
+                cfg.general.min_notify_gap_sec = (gap as u64) * 60;
+                dirty = true;
+            }
+            ui.label(
+                RichText::new("该间隔内护眼/起身/喝水/颈椎不会重复打扰")
+                    .weak()
+                    .small(),
+            );
+        });
+
+        ui.add_space(12.0);
         ui.label(RichText::new("跳过冷却（强制休息窗）").strong());
         let mut cd = cfg.general.skip_cooldown_sec as u32;
         if ui.add(egui::DragValue::new(&mut cd).range(0..=60).suffix(" 秒")).changed() {

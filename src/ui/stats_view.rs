@@ -19,8 +19,21 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
     ui.add_space(8.0);
 
     // 概要卡片
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         summary_box(ui, "📅 今日工作", &fmt_hms(app.stats.today.work_seconds), Color32::LIGHT_BLUE);
+        summary_box(
+            ui,
+            "🔥 连续达标",
+            &format!("{} 天", app.stats.streak),
+            Color32::from_rgb(230, 140, 90),
+        );
+        let (done, total) = app.stats.big_break_today;
+        summary_box(
+            ui,
+            "🧘 今日跟练",
+            &format!("{done}/{total}"),
+            Color32::from_rgb(120, 200, 160),
+        );
         summary_box(
             ui,
             "🗓 近 30 天事件总数",

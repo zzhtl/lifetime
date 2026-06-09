@@ -31,12 +31,13 @@ impl Notifier {
     }
 
     /// 综合处理一次提醒：桌面通知 + 音效（依据强度）
-    pub fn dispatch(&self, kind: ReminderKind, desktop_on: bool, sound_on: bool, volume: f32) {
+    /// body 为通知正文（由调用方按需轮换具体动作/小贴士）
+    pub fn dispatch(&self, kind: ReminderKind, body: &str, desktop_on: bool, sound_on: bool, volume: f32) {
         let intensity = kind.intensity();
         self.prune_desktop_notifications();
         if desktop_on {
             let title = format!("Lifetime · {}", kind.label());
-            if let Ok(Some(handle)) = desktop::send_notification(&title, kind.brief()) {
+            if let Ok(Some(handle)) = desktop::send_notification(&title, body) {
                 self.keep_desktop_notification(handle);
             }
         }

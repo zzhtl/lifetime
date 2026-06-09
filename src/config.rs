@@ -80,6 +80,14 @@ pub struct GeneralConfig {
     pub quiet_start: String,
     /// 勿扰结束
     pub quiet_end: String,
+    /// 微提醒（护眼/起身/喝水/颈椎）的全局最小间隔，秒；0 表示不限制。
+    /// 用于错开：该间隔内不会出现两次微提醒。
+    #[serde(default = "default_min_gap")]
+    pub min_notify_gap_sec: u64,
+}
+
+fn default_min_gap() -> u64 {
+    10 * 60
 }
 
 #[derive(Debug, Clone, Default)]
@@ -143,6 +151,7 @@ impl Default for GeneralConfig {
             skip_cooldown_sec: 15,
             quiet_start: "12:00".to_string(),
             quiet_end: "13:00".to_string(),
+            min_notify_gap_sec: default_min_gap(),
         }
     }
 }

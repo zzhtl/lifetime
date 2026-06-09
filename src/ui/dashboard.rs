@@ -10,6 +10,13 @@ use crate::ui::widgets;
 
 pub fn render(app: &mut App, ui: &mut egui::Ui) {
     ui.heading("📊 今日工作概览");
+    if app.stats.streak > 0 {
+        ui.label(
+            RichText::new(format!("🔥 已连续达标 {} 天，继续保持～", app.stats.streak))
+                .size(13.0)
+                .color(Color32::from_rgb(230, 150, 90)),
+        );
+    }
     ui.add_space(8.0);
 
     // 当前阶段与下一次大休息预计

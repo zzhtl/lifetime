@@ -121,3 +121,14 @@ pub struct Tip {
     #[serde(default)]
     pub variants: Vec<String>,
 }
+
+/// 大休息「分段跟练」中的一个小节：一条动作 + 该节分配到的时长
+#[derive(Debug, Clone)]
+pub struct RoutineSegment {
+    pub category: TipCategory,
+    pub title: String,
+    pub steps: Vec<String>,
+    pub benefit: String,
+    /// 本小节倒计时秒数
+    pub seconds: u64,
+}

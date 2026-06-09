@@ -15,11 +15,20 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
     };
     let kind = b.kind;
     let total = b.total_secs.max(1);
-    let remaining = b.remaining;
+    let remaining = b.remaining; // 整体剩余（进度条用）
     let skip_left = b.skip_available_in;
-    let title = b.tip_title.clone();
-    let steps = b.tip_steps.clone();
-    let benefit = b.tip_benefit.clone();
+    // 当前小节
+    let seg_remaining = b.seg_remaining;
+    let seg_index = b.seg_index;
+    let seg_count = b.segments.len();
+    let cur = b.segments.get(seg_index);
+    let title = cur
+        .map(|s| s.title.clone())
+        .unwrap_or_else(|| kind.label().to_string());
+    let steps = cur.map(|s| s.steps.clone()).unwrap_or_default();
+    let benefit = cur.map(|s| s.benefit.clone()).unwrap_or_default();
+    let cat_label = cur.map(|s| s.category.label()).unwrap_or("");
+    let next_title = b.segments.get(seg_index + 1).map(|s| s.title.clone());
 
     let viewport_id = egui::ViewportId::from_hash_of("lifetime-break");
     let builder = egui::ViewportBuilder::default()
@@ -54,10 +63,26 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                             .strong()
                             .color(Color32::WHITE),
                     );
-                    ui.add_space(8.0);
-                    // 大字倒计时
-                    let m = remaining / 60;
-                    let s = remaining % 60;
+                    ui.add_space(4.0);
+                    // 跟练进度：第 x/n 节 · 部位 · 整体剩余
+                    let overall_m = remaining / 60;
+                    let overall_s = remaining % 60;
+                    ui.label(
+                        RichText::new(format!(
+                            "第 {}/{} 节 · {} · 整体剩余 {:02}:{:02}",
+                            seg_index + 1,
+                            seg_count.max(1),
+                            cat_label,
+                            overall_m,
+                            overall_s,
+                        ))
+                        .size(14.0)
+                        .color(Color32::from_rgb(160, 200, 230)),
+                    );
+                    ui.add_space(6.0);
+                    // 大字倒计时（当前小节）
+                    let m = seg_remaining / 60;
+                    let s = seg_remaining % 60;
                     ui.label(
                         RichText::new(format!("{m:02}:{s:02}"))
                             .size(68.0)
@@ -65,7 +90,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                             .strong()
                             .color(Color32::from_rgb(180, 230, 255)),
                     );
-                    // 进度条
+                    // 整体进度条
                     let ratio = (total - remaining) as f32 / total as f32;
                     ui.add(
                         egui::ProgressBar::new(ratio.clamp(0.0, 1.0))
@@ -161,7 +186,15 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                                 });
                         });
 
-                    ui.add_space(18.0);
+                    ui.add_space(10.0);
+                    // 下一节预告，帮助跟练有节奏地衔接
+                    let next_hint = match &next_title {
+                        Some(t) => format!("下一节：{t}"),
+                        None => "最后一节，做完就完成啦".to_string(),
+                    };
+                    ui.label(RichText::new(next_hint).size(13.0).color(Color32::from_rgb(150, 170, 190)));
+
+                    ui.add_space(12.0);
 
                     // 跳过 / 完成按钮
                     ui.horizontal(|ui| {
@@ -205,6 +238,8 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
 
     if close_requested {
         app.pending_break = None;
+        // 记录跟练结果（完成 / 跳过），用于"今日跟练完成度"
+        app.record_big_break(acknowledged);
         if acknowledged {
             app.send(Command::AcknowledgeBreak(kind));
         } else {

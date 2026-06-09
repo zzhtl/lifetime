@@ -10,6 +10,10 @@ pub struct StatsView {
     pub today: DailySummary,
     pub last_30: Vec<DailyPoint>,
     pub kind_dist_30d: Vec<(String, i64)>,
+    /// 连续达标天数
+    pub streak: i64,
+    /// 今日大休息跟练 (已完成, 已提示总数)
+    pub big_break_today: (i64, i64),
 }
 
 impl StatsView {
@@ -18,6 +22,8 @@ impl StatsView {
             today: crate::db::get_today(db)?,
             last_30: recent_days(db, 30)?,
             kind_dist_30d: kind_distribution(db, 30)?,
+            streak: crate::db::streak(db)?,
+            big_break_today: crate::db::today_big_break_completion(db)?,
         })
     }
 }

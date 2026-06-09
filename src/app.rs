@@ -11,18 +11,23 @@ use crate::db::{self, Db, DailySummary, ReminderAction};
 use crate::reminders::ReminderKind;
 use crate::scheduler::{self, Command, RunState, SchedulerEvent, SchedulerHandle};
 use crate::stats::StatsView;
-use crate::tips::Library;
+use crate::tips::{Library, RoutineSegment, TipCategory};
 use crate::ui::{self, View};
 
-/// 模态休息窗状态
+/// 模态休息窗状态（大休息「分段跟练」）
 pub struct BreakState {
     pub kind: ReminderKind,
+    /// 整条路线总时长（进度条用）
     pub total_secs: u64,
+    /// 整体剩余秒数
     pub remaining: u64,
     pub skip_available_in: u64,
-    pub tip_title: String,
-    pub tip_steps: Vec<String>,
-    pub tip_benefit: String,
+    /// 分段动作清单
+    pub segments: Vec<RoutineSegment>,
+    /// 当前进行到第几节
+    pub seg_index: usize,
+    /// 当前小节剩余秒数（大字倒计时）
+    pub seg_remaining: u64,
 }
 
 pub struct App {
@@ -39,6 +44,8 @@ pub struct App {
     pub stats: StatsView,
 
     pub pending_break: Option<BreakState>,
+    /// 上一次大休息跟练用过的动作标题，用于下次避免重复
+    pub last_break_titles: Vec<String>,
     /// 最近一次轻量提醒，用于在 dashboard 显示
     pub last_reminder: Option<(ReminderKind, chrono::DateTime<chrono::Local>)>,
     pub error_msg: Option<String>,
@@ -68,6 +75,7 @@ impl App {
             today,
             stats,
             pending_break: None,
+            last_break_titles: Vec::new(),
             last_reminder: None,
             error_msg: None,
         })
@@ -106,45 +114,74 @@ impl App {
     }
 
     fn handle_reminder(&mut self, kind: ReminderKind) {
-        // 入库记录（默认 completed；用户在模态窗里有跳过/暂缓选项时再覆写）
-        let _ = db::record_event(&self.db, self.session_id, kind, ReminderAction::Completed);
-        // 更新当日计数
-        match kind {
-            ReminderKind::Water => self.today.water_count += 1,
-            ReminderKind::Stand => self.today.stand_count += 1,
-            ReminderKind::Eyes => self.today.eye_break_count += 1,
-            ReminderKind::Neck => self.today.neck_count += 1,
-            ReminderKind::PomodoroBreak => self.today.pomodoros += 1,
-            ReminderKind::BigBreak => self.today.big_breaks += 1,
-            _ => {}
-        }
-        let _ = db::upsert_today(&self.db, &self.today);
-
         // 桌面通知与声音已由调度线程发出（保证窗口最小化/失焦时也能提醒）；
-        // UI 线程这里只负责大休息的全屏模态窗。
+        // UI 线程这里负责入库统计，以及大休息的全屏模态窗。
         if kind == ReminderKind::BigBreak {
-            let (big_break_secs, skip_cd) = {
-                let cfg = self.config.lock().unwrap();
-                (
-                    cfg.reminders.big_break_duration_sec,
-                    cfg.general.skip_cooldown_sec,
-                )
-            };
-            let tip = kind
-                .tip_category()
-                .and_then(|c| self.tips.random_for_category(c));
-            self.pending_break = Some(BreakState {
-                kind,
-                total_secs: big_break_secs,
-                remaining: big_break_secs,
-                skip_available_in: skip_cd,
-                tip_title: tip.map(|t| t.title.clone()).unwrap_or_else(|| kind.label().to_string()),
-                tip_steps: tip.map(|t| t.steps.clone()).unwrap_or_default(),
-                tip_benefit: tip.map(|t| t.benefit.clone()).unwrap_or_default(),
-            });
+            // 大休息：触发时只弹模态；完成/跳过在关窗时记账（用于"跟练完成度"）
+            self.open_big_break();
+        } else {
+            // 其余提醒到点即视为完成
+            let _ = db::record_event(&self.db, self.session_id, kind, ReminderAction::Completed);
+            match kind {
+                ReminderKind::Water => self.today.water_count += 1,
+                ReminderKind::Stand => self.today.stand_count += 1,
+                ReminderKind::Eyes => self.today.eye_break_count += 1,
+                ReminderKind::Neck => self.today.neck_count += 1,
+                ReminderKind::PomodoroBreak => self.today.pomodoros += 1,
+                _ => {}
+            }
+            let _ = db::upsert_today(&self.db, &self.today);
         }
 
         self.last_reminder = Some((kind, Local::now()));
+    }
+
+    /// 构造一次大休息「分段跟练」并弹出模态窗
+    fn open_big_break(&mut self) {
+        let (dur, skip_cd) = {
+            let cfg = self.config.lock().unwrap();
+            (
+                cfg.reminders.big_break_duration_sec,
+                cfg.general.skip_cooldown_sec,
+            )
+        };
+        let mut segments = self.tips.build_break_routine(dur, &self.last_break_titles);
+        if segments.is_empty() {
+            // 兜底：知识库异常为空时也保证有一节内容
+            segments.push(RoutineSegment {
+                category: TipCategory::Breathing,
+                title: ReminderKind::BigBreak.label().to_string(),
+                steps: vec![ReminderKind::BigBreak.brief().to_string()],
+                benefit: String::new(),
+                seconds: dur.max(1),
+            });
+        }
+        self.last_break_titles = segments.iter().map(|s| s.title.clone()).collect();
+        let total = segments.iter().map(|s| s.seconds).sum::<u64>().max(1);
+        let seg_remaining = segments[0].seconds;
+        self.pending_break = Some(BreakState {
+            kind: ReminderKind::BigBreak,
+            total_secs: total,
+            remaining: total,
+            skip_available_in: skip_cd,
+            segments,
+            seg_index: 0,
+            seg_remaining,
+        });
+    }
+
+    /// 记录一次大休息的结果（完成或跳过），用于"今日跟练完成度"统计
+    pub fn record_big_break(&mut self, completed: bool) {
+        let action = if completed {
+            ReminderAction::Completed
+        } else {
+            ReminderAction::Skipped
+        };
+        let _ = db::record_event(&self.db, self.session_id, ReminderKind::BigBreak, action);
+        if completed {
+            self.today.big_breaks += 1;
+            let _ = db::upsert_today(&self.db, &self.today);
+        }
     }
 
     pub fn send(&self, cmd: Command) {
@@ -188,6 +225,14 @@ impl eframe::App for App {
                     if b.skip_available_in > 0 {
                         b.skip_available_in -= 1;
                     }
+                    // 当前小节倒计时；归零则自动进入下一节（跟练逐节推进）
+                    if b.seg_remaining > 0 {
+                        b.seg_remaining -= 1;
+                    }
+                    if b.seg_remaining == 0 && b.seg_index + 1 < b.segments.len() {
+                        b.seg_index += 1;
+                        b.seg_remaining = b.segments[b.seg_index].seconds;
+                    }
                     acc -= 1.0;
                 }
                 ctx.memory_mut(|m| m.data.insert_temp(key, acc));
@@ -195,6 +240,8 @@ impl eframe::App for App {
             } else {
                 let kind = b.kind;
                 self.pending_break = None;
+                // 倒计时自然走完视为完成
+                self.record_big_break(true);
                 self.send(Command::AcknowledgeBreak(kind));
             }
         }
