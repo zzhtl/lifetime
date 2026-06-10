@@ -43,6 +43,20 @@ impl Library {
             .collect()
     }
 
+    pub fn office_break_by_category(&self, cat: TipCategory) -> Vec<&Tip> {
+        self.tips
+            .iter()
+            .filter(|t| t.category == cat && t.office_break)
+            .collect()
+    }
+
+    pub fn office_break_by_category_key(&self, key: &str) -> Vec<&Tip> {
+        self.tips
+            .iter()
+            .filter(|t| t.category.key() == key && t.office_break)
+            .collect()
+    }
+
     // 单条随机抽取：大休息改为分段跟练后，生产路径改用 build_break_routine；保留供测试与将来复用
     #[allow(dead_code)]
     pub fn random_for_category(&self, key: &str) -> Option<&Tip> {
@@ -58,7 +72,7 @@ impl Library {
         let total = total_secs.max(1);
         let mut rng = rand::thread_rng();
 
-        // 适合工间起身的多部位轮换池；打乱保证每次顺序/组合不同
+        // 适合办公室内低打扰完成的多部位轮换池；打乱保证每次顺序/组合不同
         let mut pool = [
             TipCategory::Neck,
             TipCategory::Back,
@@ -66,7 +80,6 @@ impl Library {
             TipCategory::Eyes,
             TipCategory::Breathing,
             TipCategory::Wrist,
-            TipCategory::Posture,
         ];
         pool.shuffle(&mut rng);
 
@@ -74,7 +87,7 @@ impl Library {
         let want = (total / 75).clamp(3, 5) as usize;
         let cats: Vec<TipCategory> = pool
             .into_iter()
-            .filter(|c| !self.by_category(*c).is_empty())
+            .filter(|c| !self.office_break_by_category(*c).is_empty())
             .take(want)
             .collect();
         let n = cats.len();
@@ -91,7 +104,7 @@ impl Library {
             } else {
                 base
             };
-            let list = self.by_category(*cat);
+            let list = self.office_break_by_category(*cat);
             // 优先在"未被 avoid"的动作里随机；都被避开则退回全集随机
             let chosen: Option<&Tip> = list
                 .iter()
@@ -174,6 +187,25 @@ mod tests {
         let second = lib.build_break_routine(300, &avoid);
         for s in &second {
             assert!(!avoid.contains(&s.title), "应避开上次用过的动作: {}", s.title);
+        }
+    }
+
+    #[test]
+    fn routine_uses_only_office_break_tips() {
+        let lib = Library::load().unwrap();
+        let routine = lib.build_break_routine(300, &[]);
+        assert!(!routine.is_empty(), "办公室跟练路线不应为空");
+        for segment in &routine {
+            let tip = lib
+                .all()
+                .iter()
+                .find(|t| t.title == segment.title)
+                .expect("路线中的动作应来自知识库");
+            assert!(
+                tip.office_break,
+                "大休息不应抽到非办公室动作: {}",
+                tip.title
+            );
         }
     }
 }

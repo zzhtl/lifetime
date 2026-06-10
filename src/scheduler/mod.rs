@@ -160,7 +160,10 @@ fn pick_notify_body(tips: &Library, rotation: &mut TipRotation, kind: ReminderKi
     let Some(cat) = kind.tip_category() else {
         return kind.brief().to_string();
     };
-    let list = tips.by_category_key(cat);
+    let mut list = tips.office_break_by_category_key(cat);
+    if list.is_empty() {
+        list = tips.by_category_key(cat);
+    }
     if list.is_empty() {
         return kind.brief().to_string();
     }
@@ -218,5 +221,33 @@ mod tests {
         }
         let _ = handle.cmd_tx.send(Command::Quit);
         assert!(got_eyes, "调度线程未在无 UI 情况下触发护眼");
+    }
+
+    #[test]
+    fn rest_notifications_prefer_office_break_tips() {
+        let tips = Library::load().unwrap();
+        let mut rotation: TipRotation = HashMap::new();
+
+        for kind in [
+            ReminderKind::Eyes,
+            ReminderKind::Stand,
+            ReminderKind::Neck,
+            ReminderKind::PomodoroBreak,
+        ] {
+            for _ in 0..20 {
+                let body = pick_notify_body(&tips, &mut rotation, kind);
+                let title = body.split(" —— ").next().unwrap_or(body.as_str());
+                let tip = tips
+                    .all()
+                    .iter()
+                    .find(|t| t.title == title)
+                    .expect("通知正文应来自知识库");
+                assert!(
+                    tip.office_break,
+                    "{kind:?} 不应抽到非办公室动作: {}",
+                    tip.title
+                );
+            }
+        }
     }
 }

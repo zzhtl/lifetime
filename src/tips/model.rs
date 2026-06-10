@@ -103,6 +103,10 @@ pub struct Tip {
     #[serde(default)]
     pub frequency: String,
 
+    /// 是否适合作为办公室内休息跟练 / 通知动作
+    #[serde(default)]
+    pub office_break: bool,
+
     /// 动作步骤
     pub steps: Vec<String>,
 

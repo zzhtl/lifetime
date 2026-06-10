@@ -10,6 +10,7 @@ category = "eyes"
 title = "20-20-20 法则"
 duration_secs = 20
 frequency = "每 20 分钟使用屏幕后"
+office_break = true
 steps = [
   "把视线从屏幕移开",
   "找到 6 米（约 20 英尺）外的物体——窗外的树、远处的墙",
@@ -31,6 +32,7 @@ category = "eyes"
 title = "眼球转动操（8 字 + 米字）"
 duration_secs = 90
 frequency = "每 1-2 小时一次"
+office_break = true
 steps = [
   "坐直，头部完全不动，只动眼球",
   "缓慢从最左看到最右（用 3 秒走完），反方向再来一次",
@@ -52,6 +54,7 @@ category = "eyes"
 title = "远近交替对焦训练"
 duration_secs = 60
 frequency = "每天 2-3 次，每次 1 分钟"
+office_break = true
 steps = [
   "伸出食指放在鼻尖前约 25 厘米",
   "看清食指指纹细节，专注 3-4 秒",
@@ -74,6 +77,7 @@ category = "eyes"
 title = "棕榈式（Palming）热敷"
 duration_secs = 120
 frequency = "每天 2-3 次，眼睛酸胀时即刻使用"
+office_break = true
 steps = [
   "找一个安静、可遮光的位置坐下",
   "搓热双手，至感到温度升高（约 30 秒）",
@@ -97,6 +101,7 @@ category = "eyes"
 title = "刻意眨眼训练"
 duration_secs = 45
 frequency = "每 30 分钟一次"
+office_break = true
 steps = [
   "保持坐姿端正，看向屏幕或前方",
   "做一组『慢-用力-放松』眨眼：闭眼 2 秒 → 用力闭眼挤压 2 秒 → 缓慢睁开",
@@ -140,6 +145,7 @@ category = "eyes"
 title = "眼保健操（中国传统改良版）"
 duration_secs = 240
 frequency = "每天 1-2 次"
+office_break = true
 steps = [
   "用食指按揉攒竹穴（眉头内侧凹陷处）8 个 8 拍",
   "用拇指按睛明穴（内眼角与鼻梁之间）8 个 8 拍",
@@ -164,6 +170,7 @@ category = "neck"
 title = "颈部四向缓慢伸展"
 duration_secs = 120
 frequency = "每 1 小时一组"
+office_break = true
 steps = [
   "坐直，肩膀放松向下沉，不要耸肩",
   "下巴缓慢贴胸口（拉伸颈后），保持 15 秒",
@@ -187,6 +194,7 @@ category = "neck"
 title = "麦肯基颈椎后缩（双下巴）"
 duration_secs = 90
 frequency = "每 1-2 小时一组"
+office_break = true
 steps = [
   "坐直，眼睛平视前方（不抬头不低头）",
   "想象有根绳子从头顶把你向上拉",
@@ -210,6 +218,7 @@ category = "neck"
 title = "肩部环绕（动态）"
 duration_secs = 60
 frequency = "每小时一组"
+office_break = true
 steps = [
   "站立或坐直，双手自然下垂",
   "肩关节为支点，向前向上画大圆 10 次（前→上→后→下）",
@@ -232,6 +241,7 @@ category = "neck"
 title = "胸前合掌后压（颈后部拉伸）"
 duration_secs = 60
 frequency = "每 1-2 小时一次"
+office_break = true
 steps = [
   "坐直，双手十指交叉抱住后脑勺",
   "上身保持正直，不要前倾",
@@ -255,6 +265,7 @@ category = "neck"
 title = "肩胛骨挤压（W → I）"
 duration_secs = 90
 frequency = "每 1 小时一组"
+office_break = true
 steps = [
   "坐直或站立，双臂屈肘形成『W』形（肘部贴近肋骨）",
   "肩胛骨主动向后向下夹紧（想象用两块肩胛骨夹一支铅笔）",
@@ -277,6 +288,7 @@ category = "neck"
 title = "胸小肌拉伸（开胸）"
 duration_secs = 60
 frequency = "每 2 小时一次"
+office_break = true
 steps = [
   "站在门框边，右手肘弯 90°，前臂贴门框",
   "身体缓慢向左旋转，让胸前肌肉拉开",
@@ -346,6 +358,7 @@ category = "back"
 title = "靠墙站立矫正姿势"
 duration_secs = 180
 frequency = "每天 1 次，每次 3-5 分钟"
+office_break = true
 steps = [
   "找一面平坦的墙，背对而站",
   "脚后跟距墙 5 厘米",
@@ -416,6 +429,7 @@ category = "back"
 title = "站立侧弯（拉伸侧腰）"
 duration_secs = 60
 frequency = "每 1-2 小时一次"
+office_break = true
 steps = [
   "双脚与肩同宽，重心均匀",
   "左手插腰",
@@ -441,6 +455,7 @@ category = "wrist"
 title = "腕关节全方位活动"
 duration_secs = 60
 frequency = "每 1 小时一组"
+office_break = true
 steps = [
   "双手向前伸直，掌心向下",
   "手腕慢慢向上勾（伸腕），保持 5 秒",
@@ -464,6 +479,7 @@ category = "wrist"
 title = "祈祷式（拉伸前臂屈肌）"
 duration_secs = 60
 frequency = "每 1-2 小时一次"
+office_break = true
 steps = [
   "双手掌心合十于胸前，类似祈祷姿势",
   "保持掌心紧密贴合",
@@ -486,6 +502,7 @@ category = "wrist"
 title = "反向祈祷（拉伸前臂伸肌）"
 duration_secs = 60
 frequency = "每 2 小时一次"
+office_break = true
 steps = [
   "双手在身后手背相贴",
   "缓慢把双手往上移，沿着腰背向上",
@@ -556,6 +573,7 @@ category = "legs"
 title = "踝泵运动（防血栓）"
 duration_secs = 60
 frequency = "每 30 分钟做一组"
+office_break = true
 steps = [
   "坐在椅子上，双脚悬空或平放",
   "脚尖用力向上勾（背屈），保持 3 秒",
@@ -578,6 +596,7 @@ category = "legs"
 title = "靠墙小腿拉伸"
 duration_secs = 90
 frequency = "每 1-2 小时一次"
+office_break = true
 steps = [
   "面对墙，双手撑墙肩高位置",
   "右脚向后退一大步，脚跟踩地",
@@ -601,6 +620,7 @@ category = "legs"
 title = "无负重深蹲（激活下肢）"
 duration_secs = 90
 frequency = "每天 1-2 次，每次 15 个"
+office_break = true
 steps = [
   "双脚与肩同宽，脚尖略外旋（15-30°）",
   "双手伸直向前平举，配重平衡",
@@ -625,6 +645,7 @@ category = "legs"
 title = "提踵（强化小腿）"
 duration_secs = 60
 frequency = "每天 2-3 次，每次 20 个"
+office_break = true
 steps = [
   "双脚平行站立，与肩同宽",
   "可以扶墙或椅背保持平衡",
@@ -699,6 +720,7 @@ category = "breathing"
 title = "4-7-8 呼吸法（Andrew Weil 博士）"
 duration_secs = 120
 frequency = "每天 2 次，紧张时即用"
+office_break = true
 steps = [
   "找一个安静位置坐下，舌尖抵上腭后方（保持整个过程）",
   "通过嘴呼出所有气体，发出『whoosh』声",
@@ -722,6 +744,7 @@ category = "breathing"
 title = "腹式呼吸（横膈膜呼吸）"
 duration_secs = 300
 frequency = "每天 3 次，每次 5 分钟"
+office_break = true
 steps = [
   "坐姿或躺姿都可以，肩膀放松",
   "一手放胸口，一手放腹部",
@@ -746,6 +769,7 @@ category = "breathing"
 title = "1 分钟正念呼吸（短时减压）"
 duration_secs = 60
 frequency = "工间疲惫/焦虑时即可"
+office_break = true
 steps = [
   "停下手头的事，端坐或站立",
   "闭眼或柔和地看一个固定点",
