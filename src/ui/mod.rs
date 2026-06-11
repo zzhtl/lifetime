@@ -5,6 +5,7 @@ pub mod break_window;
 pub mod dashboard;
 pub mod fonts;
 pub mod library;
+pub mod practice;
 pub mod settings;
 pub mod stats_view;
 pub mod theme;
@@ -16,6 +17,7 @@ use serde::{Deserialize, Serialize};
 pub enum View {
     Dashboard,
     Library,
+    Practice,
     Stats,
     Settings,
     About,
@@ -32,6 +34,7 @@ impl View {
         match self {
             View::Dashboard => "主页",
             View::Library => "健康知识",
+            View::Practice => "养生修炼",
             View::Stats => "统计",
             View::Settings => "设置",
             View::About => "关于",
@@ -42,6 +45,7 @@ impl View {
         match self {
             View::Dashboard => "📊",
             View::Library => "📚",
+            View::Practice => "☯",
             View::Stats => "📈",
             View::Settings => "⚙",
             View::About => "ℹ",
@@ -49,7 +53,14 @@ impl View {
     }
 
     pub fn all() -> &'static [View] {
-        const ALL: [View; 5] = [View::Dashboard, View::Library, View::Stats, View::Settings, View::About];
+        const ALL: [View; 6] = [
+            View::Dashboard,
+            View::Library,
+            View::Practice,
+            View::Stats,
+            View::Settings,
+            View::About,
+        ];
         &ALL
     }
 }

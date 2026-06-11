@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use crate::config::Config;
 use crate::db::{self, Db, DailySummary, ReminderAction};
+use crate::practices::PracticeLibrary;
 use crate::reminders::ReminderKind;
 use crate::scheduler::{self, Command, RunState, SchedulerEvent, SchedulerHandle};
 use crate::stats::StatsView;
@@ -34,6 +35,7 @@ pub struct App {
     pub config: Arc<Mutex<Config>>,
     pub db: Db,
     pub tips: Library,
+    pub practices: PracticeLibrary,
     pub sched: SchedulerHandle,
 
     pub view: View,
@@ -55,6 +57,7 @@ impl App {
     pub fn new(_cc: &eframe::CreationContext<'_>, cfg: Config) -> Result<Self> {
         let db = db::open(&cfg.paths.db_file)?;
         let tips = Library::load()?;
+        let practices = PracticeLibrary::load()?;
         // 如果上次崩溃时还有未结束会话，先收尾
         if let Some(sid) = db::last_open_session(&db)? {
             let _ = db::end_session(&db, sid, 0);
@@ -67,6 +70,7 @@ impl App {
             config,
             db,
             tips,
+            practices,
             sched,
             view: View::Dashboard,
             run_state: RunState::Idle,
@@ -293,6 +297,7 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| match self.view {
             View::Dashboard => ui::dashboard::render(self, ui),
             View::Library => ui::library::render(self, ui),
+            View::Practice => ui::practice::render(self, ui),
             View::Stats => ui::stats_view::render(self, ui),
             View::Settings => ui::settings::render(self, ui),
             View::About => render_about(ui),

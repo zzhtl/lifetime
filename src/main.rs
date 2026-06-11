@@ -7,6 +7,7 @@ mod app;
 mod config;
 mod db;
 mod notify;
+mod practices;
 mod reminders;
 mod scheduler;
 mod shortcut;
