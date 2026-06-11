@@ -288,7 +288,6 @@ category = "neck"
 title = "胸小肌拉伸（开胸）"
 duration_secs = 60
 frequency = "每 2 小时一次"
-office_break = true
 steps = [
   "站在门框边，右手肘弯 90°，前臂贴门框",
   "身体缓慢向左旋转，让胸前肌肉拉开",
@@ -358,7 +357,6 @@ category = "back"
 title = "靠墙站立矫正姿势"
 duration_secs = 180
 frequency = "每天 1 次，每次 3-5 分钟"
-office_break = true
 steps = [
   "找一面平坦的墙，背对而站",
   "脚后跟距墙 5 厘米",
@@ -596,7 +594,6 @@ category = "legs"
 title = "靠墙小腿拉伸"
 duration_secs = 90
 frequency = "每 1-2 小时一次"
-office_break = true
 steps = [
   "面对墙，双手撑墙肩高位置",
   "右脚向后退一大步，脚跟踩地",
@@ -620,7 +617,6 @@ category = "legs"
 title = "无负重深蹲（激活下肢）"
 duration_secs = 90
 frequency = "每天 1-2 次，每次 15 个"
-office_break = true
 steps = [
   "双脚与肩同宽，脚尖略外旋（15-30°）",
   "双手伸直向前平举，配重平衡",
@@ -648,7 +644,7 @@ frequency = "每天 2-3 次，每次 20 个"
 office_break = true
 steps = [
   "双脚平行站立，与肩同宽",
-  "可以扶墙或椅背保持平衡",
+  "可以扶椅背或桌沿保持平衡",
   "缓慢踮起脚尖，至最高点",
   "顶端保持 2 秒，主动收紧小腿",
   "缓慢下放，脚跟接近地面但不完全触地",
@@ -856,6 +852,27 @@ caution = "心衰、肾衰患者饮水量需医生指导；运动后大量出汗
 variants = [
   "电解质策略：高强度出汗后补充含钠饮料（运动饮料/淡盐水）",
   "进阶：用尿比重试纸自测水合状态",
+]
+
+[[tip]]
+category = "nutrition"
+title = "起身喝水 + 脚踝活动"
+duration_secs = 60
+frequency = "每 45 分钟一次"
+office_break = true
+steps = [
+  "离开工位去接一杯水（150-250 ml）",
+  "站着小口喝几口，不要一次猛灌",
+  "回到工位前原地踮脚 10 次",
+  "坐下后双脚各转动脚踝 10 圈",
+  "肩膀向后绕 5 圈，再继续工作",
+]
+benefit = "补水的同时打断久坐，顺手活动下肢和肩颈"
+science = "轻量起身和踝泵能促进下肢静脉回流，规律小口饮水可减少久坐导致的疲劳和注意力下降。"
+caution = "心衰、肾衰或医生限制饮水者按医嘱控制饮水量。"
+variants = [
+  "忙碌时只做坐姿脚踝转动 + 小口喝水，也比完全不动好",
+  "有条件时绕工位走 1 分钟再回来",
 ]
 
 [[tip]]

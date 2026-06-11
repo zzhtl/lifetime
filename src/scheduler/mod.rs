@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 use crate::config::Config;
 use crate::notify::Notifier;
 use crate::reminders::{Intensity, ReminderKind};
-use crate::tips::Library;
+use crate::tips::{Library, TipMode};
 
 /// 通知正文轮换缓存：类目 key → 上次用过的标题（避免紧邻重复）
 type TipRotation = HashMap<&'static str, String>;
@@ -157,10 +157,19 @@ fn fire(
 /// 为提醒挑一条轮换正文：从对应类目随机取一条 tip（标题 + 首步），避免与上次重复；
 /// 没有类目或库为空时退回 kind.brief()，保证总有正文。
 fn pick_notify_body(tips: &Library, rotation: &mut TipRotation, kind: ReminderKind) -> String {
+    pick_notify_body_for_mode(tips, rotation, kind, TipMode::today())
+}
+
+fn pick_notify_body_for_mode(
+    tips: &Library,
+    rotation: &mut TipRotation,
+    kind: ReminderKind,
+    mode: TipMode,
+) -> String {
     let Some(cat) = kind.tip_category() else {
         return kind.brief().to_string();
     };
-    let mut list = tips.office_break_by_category_key(cat);
+    let mut list = tips.by_category_key_for_mode(cat, mode);
     if list.is_empty() {
         list = tips.by_category_key(cat);
     }
@@ -224,18 +233,19 @@ mod tests {
     }
 
     #[test]
-    fn rest_notifications_prefer_office_break_tips() {
+    fn rest_notifications_prefer_office_break_tips_on_office_days() {
         let tips = Library::load().unwrap();
         let mut rotation: TipRotation = HashMap::new();
 
         for kind in [
             ReminderKind::Eyes,
             ReminderKind::Stand,
+            ReminderKind::Water,
             ReminderKind::Neck,
             ReminderKind::PomodoroBreak,
         ] {
             for _ in 0..20 {
-                let body = pick_notify_body(&tips, &mut rotation, kind);
+                let body = pick_notify_body_for_mode(&tips, &mut rotation, kind, TipMode::Office);
                 let title = body.split(" —— ").next().unwrap_or(body.as_str());
                 let tip = tips
                     .all()
@@ -249,5 +259,15 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn wellness_notifications_can_use_full_tip_pool() {
+        let tips = Library::load().unwrap();
+        let stand_pool = tips.by_category_key_for_mode("legs", TipMode::Wellness);
+        assert!(
+            stand_pool.iter().any(|t| !t.office_break),
+            "周末起身提醒候选池应包含完整运动动作"
+        );
     }
 }

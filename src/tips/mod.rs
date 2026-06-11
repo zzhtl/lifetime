@@ -6,6 +6,7 @@ mod model;
 pub use model::{RoutineSegment, Tip, TipCategory};
 
 use anyhow::{Context, Result};
+use chrono::{Datelike, Local, Weekday};
 use rand::seq::{IteratorRandom, SliceRandom};
 use serde::Deserialize;
 
@@ -19,6 +20,27 @@ struct RawTips {
 #[derive(Debug, Clone, Default)]
 pub struct Library {
     tips: Vec<Tip>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TipMode {
+    Office,
+    Wellness,
+}
+
+impl TipMode {
+    pub fn today() -> Self {
+        Self::from_weekday(Local::now().weekday())
+    }
+
+    pub fn from_weekday(day: Weekday) -> Self {
+        match day {
+            Weekday::Mon | Weekday::Tue | Weekday::Wed | Weekday::Thu | Weekday::Fri => {
+                Self::Office
+            }
+            Weekday::Sat | Weekday::Sun => Self::Wellness,
+        }
+    }
 }
 
 impl Library {
@@ -57,6 +79,20 @@ impl Library {
             .collect()
     }
 
+    pub fn by_category_for_mode(&self, cat: TipCategory, mode: TipMode) -> Vec<&Tip> {
+        match mode {
+            TipMode::Office => self.office_break_by_category(cat),
+            TipMode::Wellness => self.by_category(cat),
+        }
+    }
+
+    pub fn by_category_key_for_mode(&self, key: &str, mode: TipMode) -> Vec<&Tip> {
+        match mode {
+            TipMode::Office => self.office_break_by_category_key(key),
+            TipMode::Wellness => self.by_category_key(key),
+        }
+    }
+
     // 单条随机抽取：大休息改为分段跟练后，生产路径改用 build_break_routine；保留供测试与将来复用
     #[allow(dead_code)]
     pub fn random_for_category(&self, key: &str) -> Option<&Tip> {
@@ -69,10 +105,19 @@ impl Library {
     /// 每节取自不同的身体部位类目（轮换打乱顺序），并尽量避开 avoid 中的标题
     /// （上一次用过的动作），从而每次组合不同、不重复。
     pub fn build_break_routine(&self, total_secs: u64, avoid: &[String]) -> Vec<RoutineSegment> {
+        self.build_break_routine_for_mode(total_secs, avoid, TipMode::today())
+    }
+
+    pub fn build_break_routine_for_mode(
+        &self,
+        total_secs: u64,
+        avoid: &[String],
+        mode: TipMode,
+    ) -> Vec<RoutineSegment> {
         let total = total_secs.max(1);
         let mut rng = rand::thread_rng();
 
-        // 适合办公室内低打扰完成的多部位轮换池；打乱保证每次顺序/组合不同
+        // 多部位轮换池；工作日只取办公室动作，周末允许更完整的养生运动。
         let mut pool = [
             TipCategory::Neck,
             TipCategory::Back,
@@ -87,7 +132,7 @@ impl Library {
         let want = (total / 75).clamp(3, 5) as usize;
         let cats: Vec<TipCategory> = pool
             .into_iter()
-            .filter(|c| !self.office_break_by_category(*c).is_empty())
+            .filter(|c| !self.by_category_for_mode(*c, mode).is_empty())
             .take(want)
             .collect();
         let n = cats.len();
@@ -104,7 +149,7 @@ impl Library {
             } else {
                 base
             };
-            let list = self.office_break_by_category(*cat);
+            let list = self.by_category_for_mode(*cat, mode);
             // 优先在"未被 avoid"的动作里随机；都被避开则退回全集随机
             let chosen: Option<&Tip> = list
                 .iter()
@@ -140,6 +185,7 @@ impl Library {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Weekday;
 
     #[test]
     fn library_loads_and_has_all_categories() {
@@ -150,6 +196,32 @@ mod tests {
         for c in TipCategory::all() {
             assert!(cats.contains(c), "缺少类目 {c:?}");
         }
+    }
+
+    #[test]
+    fn tip_mode_follows_weekday() {
+        assert_eq!(TipMode::from_weekday(Weekday::Mon), TipMode::Office);
+        assert_eq!(TipMode::from_weekday(Weekday::Fri), TipMode::Office);
+        assert_eq!(TipMode::from_weekday(Weekday::Sat), TipMode::Wellness);
+        assert_eq!(TipMode::from_weekday(Weekday::Sun), TipMode::Wellness);
+    }
+
+    #[test]
+    fn mode_filters_office_and_wellness_pools() {
+        let lib = Library::load().unwrap();
+
+        let office_legs = lib.by_category_for_mode(TipCategory::Legs, TipMode::Office);
+        assert!(!office_legs.is_empty(), "工作日腿部动作池不应为空");
+        assert!(
+            office_legs.iter().all(|t| t.office_break),
+            "工作日动作池只能包含办公室动作"
+        );
+
+        let wellness_legs = lib.by_category_for_mode(TipCategory::Legs, TipMode::Wellness);
+        assert!(
+            wellness_legs.iter().any(|t| !t.office_break),
+            "周末动作池应包含更完整的非办公室运动"
+        );
     }
 
     #[test]
@@ -164,7 +236,7 @@ mod tests {
     fn routine_has_expected_segments_and_total() {
         let lib = Library::load().unwrap();
         let total = 300;
-        let r = lib.build_break_routine(total, &[]);
+        let r = lib.build_break_routine_for_mode(total, &[], TipMode::Office);
         assert!(r.len() >= 3 && r.len() <= 5, "节数应在 3-5 之间，实际 {}", r.len());
         assert_eq!(
             r.iter().map(|s| s.seconds).sum::<u64>(),
@@ -182,9 +254,9 @@ mod tests {
     #[test]
     fn routine_avoids_previous_titles() {
         let lib = Library::load().unwrap();
-        let first = lib.build_break_routine(300, &[]);
+        let first = lib.build_break_routine_for_mode(300, &[], TipMode::Wellness);
         let avoid: Vec<String> = first.iter().map(|s| s.title.clone()).collect();
-        let second = lib.build_break_routine(300, &avoid);
+        let second = lib.build_break_routine_for_mode(300, &avoid, TipMode::Wellness);
         for s in &second {
             assert!(!avoid.contains(&s.title), "应避开上次用过的动作: {}", s.title);
         }
@@ -193,7 +265,7 @@ mod tests {
     #[test]
     fn routine_uses_only_office_break_tips() {
         let lib = Library::load().unwrap();
-        let routine = lib.build_break_routine(300, &[]);
+        let routine = lib.build_break_routine_for_mode(300, &[], TipMode::Office);
         assert!(!routine.is_empty(), "办公室跟练路线不应为空");
         for segment in &routine {
             let tip = lib
@@ -207,5 +279,25 @@ mod tests {
                 tip.title
             );
         }
+    }
+
+    #[test]
+    fn wellness_routine_can_use_non_office_tips() {
+        let lib = Library::load().unwrap();
+        let avoid: Vec<String> = lib
+            .all()
+            .iter()
+            .filter(|t| t.office_break)
+            .map(|t| t.title.clone())
+            .collect();
+        let routine = lib.build_break_routine_for_mode(300, &avoid, TipMode::Wellness);
+        assert!(!routine.is_empty(), "周末跟练路线不应为空");
+        let all_non_office = routine.iter().all(|segment| {
+            lib.all()
+                .iter()
+                .find(|t| t.title == segment.title)
+                .is_some_and(|t| !t.office_break)
+        });
+        assert!(all_non_office, "周末路线应允许非办公室动作");
     }
 }
