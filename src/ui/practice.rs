@@ -81,7 +81,7 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
 
                 // 修为境界横幅：打卡成长的核心反馈
                 realm_banner(ui, &realm, streak, accent);
-                ui.add_space(10.0);
+                ui.add_space(6.0);
 
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
@@ -159,38 +159,38 @@ fn realm_banner(ui: &mut egui::Ui, realm: &RealmProgress, streak: i64, accent: C
     egui::Frame::none()
         .fill(theme::CARD)
         .stroke(egui::Stroke::new(1.0, accent.linear_multiply(0.6)))
-        .rounding(egui::Rounding::same(10.0))
-        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
+        .rounding(egui::Rounding::same(8.0))
+        .inner_margin(egui::Margin::symmetric(12.0, 6.0))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
                 ui.label(
                     RichText::new(format!("⛰ {}", realm.name))
-                        .size(18.0)
+                        .size(15.0)
                         .strong()
                         .color(accent),
                 );
-                ui.add_space(10.0);
+                ui.add_space(8.0);
                 ui.label(
                     RichText::new(format!("修为 {}", realm.points))
-                        .size(13.0)
+                        .size(12.0)
                         .color(theme::TEXT_WEAK),
                 );
                 if streak > 0 {
-                    ui.add_space(10.0);
+                    ui.add_space(8.0);
                     ui.label(
-                        RichText::new(format!("🔥 连续修炼 {} 天", streak))
-                            .size(13.0)
+                        RichText::new(format!("🔥 连续 {} 天", streak))
+                            .size(12.0)
                             .color(theme::WARN),
                     );
                 }
             });
-            ui.add_space(6.0);
+            ui.add_space(4.0);
             let hint = match realm.next_name {
-                Some(next) => format!("距「{}」还需 {} 次修炼", next, realm.need),
-                None => "已臻化境，修为圆满".to_string(),
+                Some(next) => format!("距「{}」还需 {} 次", next, realm.need),
+                None => "已臻化境".to_string(),
             };
-            ui.add(egui::ProgressBar::new(realm.ratio).text(RichText::new(hint).size(12.0)));
+            ui.add(egui::ProgressBar::new(realm.ratio).text(RichText::new(hint).size(11.0)));
         });
 }
 

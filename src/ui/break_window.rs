@@ -35,8 +35,8 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
     // （Linux 上 egui 默认还会 clamp 到显示器尺寸，兜底防止过大窗口崩溃）
     let win_h = ctx
         .input(|i| i.viewport().monitor_size)
-        .map(|s| (s.y * 0.9).min(900.0))
-        .unwrap_or(880.0)
+        .map(|s| (s.y * 0.78).min(700.0))
+        .unwrap_or(680.0)
         .max(560.0);
 
     let viewport_id = egui::ViewportId::from_hash_of("lifetime-break");
