@@ -30,11 +30,20 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
     let cat_label = cur.map(|s| s.category.label()).unwrap_or("");
     let next_title = b.segments.get(seg_index + 1).map(|s| s.title.clone());
 
+    // 按显示器高度自适应窗口高：大屏更高、一次看全跟练卡片；矮屏收敛不超出屏幕。
+    // 留 10% 余量给标题栏/任务栏；夹在 560~900 之间。
+    // （Linux 上 egui 默认还会 clamp 到显示器尺寸，兜底防止过大窗口崩溃）
+    let win_h = ctx
+        .input(|i| i.viewport().monitor_size)
+        .map(|s| (s.y * 0.9).min(900.0))
+        .unwrap_or(880.0)
+        .max(560.0);
+
     let viewport_id = egui::ViewportId::from_hash_of("lifetime-break");
     let builder = egui::ViewportBuilder::default()
         .with_title("Lifetime · 该休息了")
-        .with_inner_size([760.0, 620.0])
-        .with_min_inner_size([620.0, 500.0])
+        .with_inner_size([760.0, win_h])
+        .with_min_inner_size([620.0, win_h.min(640.0)])
         .with_always_on_top()
         .with_decorations(true)
         .with_maximized(false);
@@ -85,7 +94,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                     let s = seg_remaining % 60;
                     ui.label(
                         RichText::new(format!("{m:02}:{s:02}"))
-                            .size(68.0)
+                            .size(54.0)
                             .monospace()
                             .strong()
                             .color(Color32::from_rgb(180, 230, 255)),
@@ -98,7 +107,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                             .text(""),
                     );
 
-                    ui.add_space(18.0);
+                    ui.add_space(12.0);
 
                     let card_height = (ui.available_height() - 104.0).max(220.0);
 
@@ -186,7 +195,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                                 });
                         });
 
-                    ui.add_space(10.0);
+                    ui.add_space(8.0);
                     // 下一节预告，帮助跟练有节奏地衔接
                     let next_hint = match &next_title {
                         Some(t) => format!("下一节：{t}"),
@@ -194,7 +203,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                     };
                     ui.label(RichText::new(next_hint).size(13.0).color(Color32::from_rgb(150, 170, 190)));
 
-                    ui.add_space(12.0);
+                    ui.add_space(8.0);
 
                     // 跳过 / 完成按钮
                     ui.horizontal(|ui| {
