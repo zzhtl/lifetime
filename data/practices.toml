@@ -1462,3 +1462,666 @@ sources = [
   { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
   { name = "Harvard Health Relaxation Techniques", url = "https://www.health.harvard.edu/mind-and-mood/six-relaxation-techniques-to-reduce-stress", level = "medical_center" },
 ]
+
+# —— 扩充批次：各分类补充条目 ——
+
+[[practice]]
+category = "diet"
+title = "早餐立本：晨食养中"
+stage = "foundation"
+duration_mins = 15
+frequency = "每日晨起"
+scenes = ["home"]
+summary = "一日之食始于晨，早餐稳，血糖与精力才有底。"
+steps = [
+  "起床后 1-2 小时内进食，不空腹硬扛到午饭",
+  "搭配优质蛋白（蛋、奶、豆）与复合碳水（燕麦、全麦、薯类）",
+  "加一份蔬菜或水果，补充纤维和维生素",
+  "少让高糖糕点、含糖饮料当早餐主角",
+]
+benefit = "稳定上午血糖与专注力，减少午前饥饿性暴食"
+science = "规律早餐有助于平稳血糖波动，蛋白与纤维组合能延长饱腹、避免上午精力骤降。"
+caution = "糖尿病、胃病或特殊代谢管理者的进食安排以医生或营养师方案为准。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Chronic Disease Prevention", url = "https://www.cdc.gov/chronic-disease/prevention/index.html", level = "government" },
+]
+
+[[practice]]
+category = "diet"
+title = "细嚼慢咽：一口三十"
+stage = "entry"
+duration_mins = 15
+frequency = "每餐"
+scenes = ["home", "office"]
+summary = "把速度降下来，让脾胃有时间收到饱的信号。"
+steps = [
+  "每口咀嚼到食物成糊再咽，参考二十到三十下",
+  "放下筷子或勺子，等咽下再夹下一口",
+  "一餐尽量吃满 20 分钟，不边走边吞",
+  "先吃菜和蛋白，再吃主食，放慢升糖速度",
+]
+benefit = "减少过食与餐后腹胀，帮助控制总量"
+science = "饱腹信号从进食到被大脑接收约需 20 分钟，放慢进食可减少无意识过量摄入。"
+caution = "有吞咽障碍、胃肠疾病或咀嚼困难者按医嘱调整，不勉强大口进食。"
+sources = [
+  { name = "黄帝内经·素问·阴阳应象大论", url = "https://ctext.org/huangdi-neijing/yin-yang-ying-xiang-da-lun/zhs", level = "classic" },
+  { name = "CDC Chronic Disease Prevention", url = "https://www.cdc.gov/chronic-disease/prevention/index.html", level = "government" },
+]
+
+[[practice]]
+category = "diet"
+title = "晚食宜早：胃空好眠"
+stage = "foundation"
+duration_mins = 20
+frequency = "每日晚餐"
+scenes = ["home"]
+summary = "晚饭早一点、轻一点，给睡眠留出空胃。"
+steps = [
+  "尽量在睡前 3 小时完成晚餐",
+  "晚餐量小于午餐，少油炸、少重口、少高糖",
+  "夜里饿时选温奶、少量坚果或水果，不加宵夜大餐",
+  "饭后慢走 10 分钟，不立刻躺下",
+]
+benefit = "减少夜间反酸、睡眠打断和第二天早晨的沉重感"
+science = "临睡前大量进食会增加胃食管反流和血糖波动风险，早而清淡的晚餐更利于睡眠。"
+caution = "糖尿病、低血糖倾向或孕期人群的加餐安排应遵医嘱，避免夜间低血糖。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Chronic Disease Prevention", url = "https://www.cdc.gov/chronic-disease/prevention/index.html", level = "government" },
+]
+
+[[practice]]
+category = "walking_running"
+title = "晨昏定省：作息定点"
+stage = "foundation"
+duration_mins = 5
+frequency = "每日"
+scenes = ["home", "bedtime"]
+summary = "起居有常先定两个点：几点醒、几点睡，身体才有节律可依。"
+steps = [
+  "先固定起床时间，工作日与周末相差不超过 1 小时",
+  "由起床时间倒推入睡时间，给入睡留 20-30 分钟缓冲",
+  "晨起见光、夜间调暗，用光照强化节律",
+  "记录一周实际作息，逐步把偏差往目标点收",
+]
+benefit = "稳定生物钟，改善入睡、精力和情绪波动"
+science = "固定的起床与入睡时间是校准昼夜节律的核心，比单纯延长卧床时间更有效。"
+caution = "长期失眠或倒班人群不要在床上焦虑硬躺，必要时咨询睡眠专业人士。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "American Heart Association Life's Essential 8", url = "https://www.heart.org/en/healthy-living/healthy-lifestyle/lifes-essential-8", level = "guideline" },
+]
+
+[[practice]]
+category = "walking_running"
+title = "拾级代步：楼梯养力"
+stage = "entry"
+duration_mins = 5
+frequency = "每日多次"
+scenes = ["office", "outdoor"]
+summary = "把电梯换成楼梯，日常里顺手攒下心肺与腿力。"
+steps = [
+  "低楼层优先走楼梯，高楼层可提前几层下电梯再走",
+  "上楼时全脚掌踩实，扶好扶手，速度以能对话为度",
+  "下楼放慢、护住膝盖，不跳级冲下",
+  "从每天几趟开始，逐步增加层数",
+]
+benefit = "在碎片时间里累积中等强度活动，强化下肢和心肺"
+science = "爬楼是易得的间歇性有氧活动，能累积每日活动量并锻炼腿部肌群。"
+caution = "膝踝疼痛、严重心肺疾病、眩晕或体重过大者量力而行，必要时先咨询医生。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Adult Physical Activity", url = "https://www.cdc.gov/physical-activity-basics/guidelines/adults.html", level = "guideline" },
+]
+
+[[practice]]
+category = "walking_running"
+title = "间歇快走：步中提速"
+stage = "foundation"
+duration_mins = 25
+frequency = "每周 3 次"
+scenes = ["outdoor"]
+summary = "在平稳步行里插入几段快走，用小起伏提升心肺。"
+steps = [
+  "先常速走 5 分钟热身",
+  "快走 1 分钟到微喘，再常速走 2 分钟恢复",
+  "如此交替 6-8 组，全程能说短句为度",
+  "结束常速走 5 分钟收尾，再拉伸小腿",
+]
+benefit = "在低门槛步行基础上进一步提升心肺耐力"
+science = "在有氧活动中穿插较高强度的间歇，可在相近时间内获得更好的心肺刺激。"
+caution = "胸痛、明显气短、心脏病史或血压不稳者先咨询医生再提高强度。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Adult Physical Activity", url = "https://www.cdc.gov/physical-activity-basics/guidelines/adults.html", level = "guideline" },
+]
+
+[[practice]]
+category = "taiji_qigong"
+title = "六字诀：吐纳养脏"
+stage = "foundation"
+duration_mins = 10
+frequency = "每周 3-5 次"
+scenes = ["home"]
+summary = "以嘘、呵、呼、呬、吹、嘻六种吐气配合舒缓动作，练匀细呼吸。"
+steps = [
+  "站稳或坐稳，先自然呼吸 1 分钟",
+  "每个字对应一次缓慢呼气，轻轻吐出对应字音，不用力憋气",
+  "吸气自然、呼气略长，一字做 3-6 次",
+  "六字依次做完，全程动作柔缓、意随息走",
+  "收功站定 1 分钟，感受呼吸平稳",
+]
+benefit = "帮助放松、调匀呼吸，作为温和的传统导引练习"
+science = "六字诀属于以呼气发声配合动作的气功，慢而长的呼气有助于放松反应。"
+caution = "不憋气、不追求特殊气感；头晕、胸闷时恢复自然呼吸并休息。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "NIH NCCIH Qigong", url = "https://www.nccih.nih.gov/health/qigong-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "taiji_qigong"
+title = "太极起势：松沉入静"
+stage = "entry"
+duration_mins = 6
+frequency = "每日"
+scenes = ["home"]
+summary = "只练太极第一式起落，把松、沉、匀先立住。"
+steps = [
+  "双脚与肩同宽，膝微屈，头顶轻轻上领",
+  "吸气时双臂缓慢平举至肩高，肩肘放松",
+  "呼气时双臂缓缓下按，重心随之下沉",
+  "起落各 8-10 次，动作越慢越好，呼吸自然",
+]
+benefit = "训练放松、下沉和呼吸与动作的协调，作为太极入门"
+science = "太极类练习强调缓慢、放松与重心控制，有助于平衡与身心放松。"
+caution = "膝痛或血压不稳者减小幅度、缩短时间；起身动作要慢，避免头晕。"
+sources = [
+  { name = "黄帝内经·素问·阴阳应象大论", url = "https://ctext.org/huangdi-neijing/yin-yang-ying-xiang-da-lun/zhs", level = "classic" },
+  { name = "NIH NCCIH Tai Chi", url = "https://www.nccih.nih.gov/health/tai-chi-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "taiji_qigong"
+title = "金鸡独立：静中练稳"
+stage = "foundation"
+duration_mins = 5
+frequency = "每日"
+scenes = ["home"]
+summary = "以单脚站立练平衡与下肢稳定，动中含静。"
+steps = [
+  "靠近墙或椅背，随时可扶",
+  "重心移到一脚，另一脚缓慢抬起，膝盖上提",
+  "站稳后目光平视固定一点，呼吸自然",
+  "每侧从 10-20 秒开始，左右交替 3-4 次",
+]
+benefit = "改善平衡与下肢稳定，对久坐和年长者尤其有帮助"
+science = "单腿站立是简单的平衡训练，规律练习有助于降低跌倒风险、增强本体感觉。"
+caution = "平衡差、眩晕、下肢无力者务必扶稳，必要时在他人陪同下练习。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "NIH NCCIH Tai Chi", url = "https://www.nccih.nih.gov/health/tai-chi-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "stretching"
+title = "腿后舒筋：坐位前屈"
+stage = "entry"
+duration_mins = 5
+frequency = "每日"
+scenes = ["home", "office"]
+summary = "久坐让大腿后侧发紧，用温和前屈把它拉开。"
+steps = [
+  "坐在椅子前沿，一腿伸直、脚跟着地、脚尖上勾",
+  "背部保持挺直，从髋部缓慢前倾，不弓腰",
+  "感到大腿后侧被拉伸即停，保持 20-30 秒",
+  "左右各做 2 次，配合缓慢呼气",
+]
+benefit = "缓解腘绳肌紧张，改善久坐后的腿背僵硬"
+science = "温和的静态拉伸可改善腘绳肌柔韧性，缓解久坐带来的紧绷感。"
+caution = "拉伸以轻微牵拉为度，出现锐痛、麻木或腰痛加重时停止；急性腰伤者慎做。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Adult Physical Activity", url = "https://www.cdc.gov/physical-activity-basics/guidelines/adults.html", level = "guideline" },
+]
+
+[[practice]]
+category = "stretching"
+title = "开肩松胸：门框展臂"
+stage = "entry"
+duration_mins = 4
+frequency = "每日"
+scenes = ["home", "office"]
+summary = "圆肩含胸久了，用门框把胸前打开。"
+steps = [
+  "站在门框边，前臂贴门框，肘略低于肩",
+  "一脚向前迈半步，身体缓慢前移",
+  "感到胸前被拉开即停，保持 20-30 秒",
+  "调整肘的高低，分别拉伸胸部上、中、下束",
+]
+benefit = "缓解圆肩含胸，让呼吸更舒展"
+science = "久坐使胸前肌群短缩、牵拉肩胛前移，温和开胸拉伸有助于改善姿势与活动度。"
+caution = "肩关节不稳或有脱位史者减小幅度；出现手臂发麻立即停止并调整高度。"
+sources = [
+  { name = "黄帝内经·素问·异法方宜论", url = "https://ctext.org/huangdi-neijing/yi-fa-fang-yi-lun/zhs", level = "classic" },
+  { name = "CDC Adult Physical Activity", url = "https://www.cdc.gov/physical-activity-basics/guidelines/adults.html", level = "guideline" },
+]
+
+[[practice]]
+category = "stretching"
+title = "脊柱回旋：坐姿舒展"
+stage = "entry"
+duration_mins = 4
+frequency = "每 1-2 小时"
+scenes = ["office", "home"]
+summary = "久坐后脊柱僵，用温和旋转唤醒胸椎活动度。"
+steps = [
+  "坐直，双脚踩实，双手交叉抱肩或扶椅背",
+  "呼气时上身缓慢向一侧旋转，头随之转",
+  "到轻微牵拉即停，保持 3 次呼吸再回正",
+  "左右交替各 3-4 次，幅度温和不猛甩",
+]
+benefit = "改善胸椎旋转活动度，缓解久坐后背部僵硬"
+science = "温和的脊柱旋转活动有助于恢复胸椎活动度，减少久坐代偿性紧张。"
+caution = "椎间盘突出急性期、骨质疏松或脊柱术后者先咨询专业人士，动作务必缓慢。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Adult Physical Activity", url = "https://www.cdc.gov/physical-activity-basics/guidelines/adults.html", level = "guideline" },
+]
+
+[[practice]]
+category = "yijin_jing"
+title = "春捂秋冻：递变增减"
+stage = "long_term"
+duration_mins = 5
+frequency = "换季时"
+scenes = ["home", "outdoor"]
+summary = "四时调神重在顺气：春不骤减衣，秋不急添厚，随温度渐变。"
+steps = [
+  "春季气温回升不稳时，衣物分层，按早晚温差增减",
+  "秋季初凉不必立刻裹厚，给身体一点适应凉意的空间",
+  "重点护住颈背、腰腹和足部，避免骤冷骤热",
+  "以体感为准，出汗即减、发凉即添，不硬套教条",
+]
+benefit = "减少换季温差带来的着凉与不适"
+science = "季节交替时气温波动大，分层穿衣、按温差灵活增减有助于体温调节。"
+caution = "心血管疾病、老人和儿童对温差更敏感，寒潮时以保暖为先，不生搬秋冻。"
+sources = [
+  { name = "黄帝内经·素问·四气调神大论", url = "https://ctext.org/huangdi-neijing/si-qi-diao-shen-da-lun/zhs", level = "classic" },
+  { name = "CDC Chronic Disease Prevention", url = "https://www.cdc.gov/chronic-disease/prevention/index.html", level = "government" },
+]
+
+[[practice]]
+category = "yijin_jing"
+title = "冬至微阳：藏中蓄养"
+stage = "long_term"
+duration_mins = 15
+frequency = "冬至前后"
+scenes = ["home"]
+summary = "冬至一阳初生，宜静养藏精，动作宜缓不宜猛。"
+steps = [
+  "保证睡眠时长，早睡稍晚起，等日光再出门",
+  "运动选室内导引、快走等低冲击方式，热身更久",
+  "饮食温热为主，少生冷，注意腰腹与足部保暖",
+  "情绪上少熬夜内耗，把节奏整体放慢",
+]
+benefit = "顺应冬季闭藏，减少寒冷刺激下的疲劳与不适"
+science = "寒冷会增加心血管负担，冬季更需充足睡眠、充分热身与保暖。"
+caution = "高血压、心血管疾病或寒冷诱发不适者，冬季户外与晨练需格外谨慎。"
+sources = [
+  { name = "黄帝内经·素问·四气调神大论", url = "https://ctext.org/huangdi-neijing/si-qi-diao-shen-da-lun/zhs", level = "classic" },
+  { name = "American Heart Association Life's Essential 8", url = "https://www.heart.org/en/healthy-living/healthy-lifestyle/lifes-essential-8", level = "guideline" },
+]
+
+[[practice]]
+category = "yijin_jing"
+title = "换季调摄：交节防感"
+stage = "long_term"
+duration_mins = 10
+frequency = "季节交替时"
+scenes = ["home", "office"]
+summary = "交节之时最易外感，调摄作息、饮食和防护同步跟上。"
+steps = [
+  "保持规律作息，别在换季时叠加熬夜和过劳",
+  "饮食均衡、足量饮水，蔬果与蛋白跟上",
+  "温差大或流行季注意通风、勤洗手、必要时戴口罩",
+  "出现乏力、咽痛等苗头信号时先减量休息",
+]
+benefit = "降低换季时的外感与疲劳风险"
+science = "季节交替与呼吸道疾病高发相关，作息、营养和基础防护是可控的保护因素。"
+caution = "持续发热、呼吸困难或症状加重不要硬扛，及时就医。"
+sources = [
+  { name = "黄帝内经·素问·四气调神大论", url = "https://ctext.org/huangdi-neijing/si-qi-diao-shen-da-lun/zhs", level = "classic" },
+  { name = "CDC Chronic Disease Prevention", url = "https://www.cdc.gov/chronic-disease/prevention/index.html", level = "government" },
+]
+
+[[practice]]
+category = "prevention"
+title = "起坐防跌：稳步固本"
+stage = "foundation"
+duration_mins = 8
+frequency = "每周 2-3 次"
+scenes = ["home"]
+summary = "治未病也包括防跌：练稳下肢，理顺居家环境。"
+steps = [
+  "练习起坐：从椅子缓慢站起、坐下 8-10 次，扶稳借力",
+  "每天做单脚站立等简单平衡练习，旁边有支撑",
+  "清理居家过道杂物、地线和松动地毯，浴室加防滑垫",
+  "夜间留一盏小夜灯，起夜先坐稳再起身",
+]
+benefit = "增强下肢力量与平衡，降低跌倒和意外风险"
+science = "下肢力量、平衡训练与居家环境改造是公认的跌倒预防措施，对中老年人尤为重要。"
+caution = "已有明显平衡障碍、眩晕或骨质疏松者，应在他人陪同或专业指导下练习。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Adult Physical Activity", url = "https://www.cdc.gov/physical-activity-basics/guidelines/adults.html", level = "guideline" },
+]
+
+[[practice]]
+category = "prevention"
+title = "听力护耳：控噪防损"
+stage = "long_term"
+duration_mins = 3
+frequency = "长期"
+scenes = ["office", "home", "outdoor"]
+summary = "耳为清窍，噪声伤听不可逆，防在平时。"
+steps = [
+  "耳机遵循 60-60 原则：音量不超 60%、连续不超 60 分钟",
+  "嘈杂环境优先用降噪耳机，靠降噪而非加大音量",
+  "接触强噪声（演出、电钻、装修）时佩戴耳塞",
+  "耳朵闷响、耳鸣或听力下降持续时及时就医",
+]
+benefit = "减少噪声性听力损伤，保护长期听力"
+science = "长期暴露于过大音量会造成不可逆的噪声性听力损失，控制音量与时长是关键预防手段。"
+caution = "突发听力下降、持续耳鸣或耳痛是就医信号，不要自行拖延。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Chronic Disease Prevention", url = "https://www.cdc.gov/chronic-disease/prevention/index.html", level = "government" },
+]
+
+[[practice]]
+category = "prevention"
+title = "皮之屏障：防晒护肤"
+stage = "long_term"
+duration_mins = 3
+frequency = "日间外出"
+scenes = ["outdoor", "office"]
+summary = "皮肤是第一道屏障，防晒是最省事的护肤和防病。"
+steps = [
+  "日间外出前涂防晒，或用遮阳帽、墨镜、长袖物理遮挡",
+  "正午紫外线强时尽量避开长时间暴晒",
+  "干燥时做好保湿，维持皮肤屏障",
+  "留意痣或斑块的形状、颜色、大小变化，异常及时就诊",
+]
+benefit = "降低晒伤、光老化风险，护住皮肤屏障"
+science = "紫外线暴露与皮肤老化和皮肤癌风险相关，防晒与遮挡是有效的预防措施。"
+caution = "皮肤出现久不愈合的溃疡、快速变化的痣或斑块，应尽早就医评估。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "CDC Chronic Disease Prevention", url = "https://www.cdc.gov/chronic-disease/prevention/index.html", level = "government" },
+]
+
+[[practice]]
+category = "immunity"
+title = "肠道养菌：纤维固卫"
+stage = "foundation"
+duration_mins = 5
+frequency = "每日"
+scenes = ["home"]
+summary = "正气与肠道相关，喂好菌群，先从纤维和发酵食物入手。"
+steps = [
+  "每天保证足量蔬菜、全谷物和豆类，摄入多样纤维",
+  "适量加入酸奶、纳豆、泡菜等发酵食物",
+  "减少高糖、超加工食品对菌群的干扰",
+  "增纤维要循序渐进，同时多喝水",
+]
+benefit = "支持肠道菌群多样性，间接支持免疫与代谢"
+science = "膳食纤维和发酵食物有助于肠道菌群多样性，而肠道微生态与免疫调节相关。"
+caution = "肠易激、炎症性肠病或术后人群调整膳食纤维需遵医嘱，避免加重不适。"
+sources = [
+  { name = "黄帝内经·素问·阴阳应象大论", url = "https://ctext.org/huangdi-neijing/yin-yang-ying-xiang-da-lun/zhs", level = "classic" },
+  { name = "NIH ODS Immune Function", url = "https://ods.od.nih.gov/factsheets/ImmuneFunction-Consumer/", level = "government" },
+]
+
+[[practice]]
+category = "immunity"
+title = "日照生维：晒背养正"
+stage = "entry"
+duration_mins = 15
+frequency = "晴天"
+scenes = ["outdoor"]
+summary = "适度晒太阳有助维生素 D，但要防过度暴晒。"
+steps = [
+  "选紫外线不太强的时段，晒背、手臂 10-15 分钟",
+  "避开正午烈日，面部可遮挡防晒",
+  "冬季或少见光者，关注维生素 D 是否充足",
+  "缺乏时在医生指导下评估是否需要补充",
+]
+benefit = "帮助维持维生素 D 水平，支持骨骼与免疫"
+science = "皮肤经日照可合成维生素 D，其对骨骼健康和免疫功能有重要作用；但需平衡防晒。"
+caution = "光敏性疾病、皮肤病史者慎晒；补剂不可自行长期高剂量，需遵医嘱。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "NIH ODS Immune Function", url = "https://ods.od.nih.gov/factsheets/ImmuneFunction-Consumer/", level = "government" },
+]
+
+[[practice]]
+category = "immunity"
+title = "宽心固卫：减压养正"
+stage = "foundation"
+duration_mins = 10
+frequency = "每日"
+scenes = ["home", "office"]
+summary = "长期压力耗散正气，减压也是固本的一环。"
+steps = [
+  "每天留一段无干扰时间，做慢呼吸或放松练习",
+  "把压力事项写下来并拆成下一步，减少空转焦虑",
+  "保证睡眠和适度运动，两者是天然的减压器",
+  "维持与人的联结，别把压力全憋在心里",
+]
+benefit = "缓解慢性压力，间接支持免疫与整体状态"
+science = "慢性压力会影响免疫与炎症调节，规律放松、睡眠和社交支持有助于压力管理。"
+caution = "持续焦虑、抑郁或压力已影响生活功能时，应寻求专业帮助。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "NIH NCCIH Mind and Body Approaches for Stress", url = "https://www.nccih.nih.gov/health/providers/digest/mind-and-body-approaches-for-stress", level = "government" },
+]
+
+[[practice]]
+category = "mind_breath"
+title = "观息自然：不调而调"
+stage = "entry"
+duration_mins = 8
+frequency = "每日"
+scenes = ["home", "office", "bedtime"]
+summary = "不刻意控制呼吸，只是观察它，久之自然变匀。"
+steps = [
+  "坐稳或躺平，肩颈放松，双眼微闭",
+  "把注意力放在鼻端或腹部起伏，只观察不改造",
+  "走神了不自责，温和把注意力带回呼吸",
+  "从 8 分钟开始，结束后缓慢睁眼、动一动身体",
+]
+benefit = "训练注意力稳定，降低紧张，适合日常与睡前"
+science = "呼吸觉察是正念的基础形式，有助于注意力调节和放松，不需要刻意改变呼吸。"
+caution = "若觉察呼吸引发紧张或过度关注，改为睁眼、听环境声等更中性的锚点。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+]
+
+[[practice]]
+category = "mind_breath"
+title = "慈心念己：善意养和"
+stage = "foundation"
+duration_mins = 10
+frequency = "每周 3-5 次"
+scenes = ["home", "bedtime"]
+summary = "先善待自己，再把善意推及他人，柔化紧绷的心。"
+steps = [
+  "坐稳做几次慢呼吸，让身体先安定",
+  "心中默念对自己的祝愿，如愿我平安、愿我放松",
+  "再把祝愿推及亲近的人、普通的人",
+  "情绪起伏时不评判，回到默念的语句",
+]
+benefit = "培养自我关怀，缓解自责与紧张情绪"
+science = "慈心冥想属于有研究支持的心理练习，有助于提升积极情绪和自我关怀。"
+caution = "若默念引发强烈自责或悲伤，减短时间或改做中性的呼吸觉察；情绪困扰持续应求助。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+]
+
+[[practice]]
+category = "mind_breath"
+title = "转念释忧：书写解结"
+stage = "entry"
+duration_mins = 10
+frequency = "情绪淤堵时"
+scenes = ["home", "office"]
+summary = "念头堵住时，把它写下来、看清楚，比在脑中反刍更松。"
+steps = [
+  "拿纸笔，把此刻最扰心的事如实写下",
+  "分开写：哪些是事实，哪些是我的想象与担心",
+  "针对可控部分，写一个最小的下一步",
+  "写完合上本子，允许暂时把它放下",
+]
+benefit = "减少反刍思维，把内耗转成可执行的一步"
+science = "表达性书写和认知重构有助于降低反刍，缓解焦虑情绪。"
+caution = "若书写越写越陷入痛苦或出现自伤念头，请停止并寻求专业帮助。"
+sources = [
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+  { name = "Harvard Health Relaxation Techniques", url = "https://www.health.harvard.edu/mind-and-mood/six-relaxation-techniques-to-reduce-stress", level = "medical_center" },
+]
+
+[[practice]]
+category = "xian_cultivation"
+title = "清静遣欲：澄心止念"
+stage = "foundation"
+duration_mins = 10
+frequency = "每日"
+scenes = ["home", "bedtime"]
+summary = "依《清静经》遣欲澄心之意，练放下多余念头，不与念头较劲。"
+steps = [
+  "坐稳先守息 3 分钟，让呼吸自然放慢",
+  "念头来时，不追随也不压制，只看着它起落",
+  "把注意力轻轻放回呼吸，像水面渐渐澄清",
+  "结束写一句：今天最常出现的念头是什么",
+]
+benefit = "训练与念头保持距离，减少被欲望和杂念牵走"
+science = "遣欲澄心可现代化理解为认知解离与注意力回收，是冥想中可操作的部分。"
+caution = "不追求空无或特殊体验；若引发焦虑、失眠加重或强烈不适，减量或停止。"
+sources = [
+  { name = "太上老君说常清静妙经", url = "https://ctext.org/wiki.pl?chapter=441839&if=gb&remap=gb", level = "classic" },
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+]
+
+[[practice]]
+category = "xian_cultivation"
+title = "坐忘遗形：松身安坐"
+stage = "foundation"
+duration_mins = 12
+frequency = "每周 5 次"
+scenes = ["home"]
+summary = "取《坐忘论》之意，先把身体彻底放松，再谈收心。"
+steps = [
+  "端坐或平躺，从头到脚依次放松，每处停留几秒",
+  "让下巴、肩膀、手掌、腹部逐一松开",
+  "呼气时想象身体又沉下去一点，不用力",
+  "身体安定后，只轻轻守着呼吸 5 分钟收尾",
+]
+benefit = "以放松入静，降低身体紧张对打坐的干扰"
+science = "系统性放松与身体扫描有助于降低肌肉紧张和交感兴奋，是入静的稳妥前置。"
+caution = "不要长时间硬坐；出现麻木、心悸、强烈情绪时结束练习并活动身体。"
+sources = [
+  { name = "坐忘论", url = "https://ctext.org/wiki.pl?if=gb&remap=gb&res=270447", level = "classic" },
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+]
+
+[[practice]]
+category = "xian_cultivation"
+title = "阴符食时：应机养身"
+stage = "long_term"
+duration_mins = 10
+frequency = "每周复盘"
+scenes = ["home"]
+summary = "取《阴符经》食其时、动其机之意，顺身体与作息的节律行事。"
+steps = [
+  "按规律作息进食，不长期昼夜颠倒、饥饱无常",
+  "把重要练功和用脑安排在精力最好的时段",
+  "困倦、生病、过劳时顺势减量，不逆势硬撑",
+  "每周复盘一次：作息、精力、情绪是否顺畅",
+]
+benefit = "顺应节律安排饮食、作息与练功，减少逆势消耗"
+science = "顺应昼夜节律安排进食与活动，有助于代谢、睡眠和精力的稳定。"
+caution = "此为作息养生思路，不能替代医学判断；明显症状与异常指标需就医。"
+sources = [
+  { name = "阴符经", url = "https://ctext.org/wiki.pl?if=gb&remap=gb&res=734873", level = "classic" },
+  { name = "NIH NCCIH Mind and Body Approaches for Stress", url = "https://www.nccih.nih.gov/health/providers/digest/mind-and-body-approaches-for-stress", level = "government" },
+]
+
+[[practice]]
+category = "xian_cultivation"
+title = "先天一炁：匀息养元"
+stage = "foundation"
+duration_mins = 8
+frequency = "每日"
+scenes = ["home", "office"]
+summary = "丹经所谓先天一炁，日用只取匀细呼吸、养住元气，不搬运、不闭气。"
+steps = [
+  "坐稳肩颈放松，先自然呼吸 1 分钟",
+  "让呼吸慢慢变细、变匀，吸气自然、呼气略长",
+  "注意力轻放在下腹起伏，不刻意鼓劲",
+  "12-20 轮后回到自然呼吸，起身活动",
+]
+benefit = "以匀细呼吸收敛心神，作为温和的养气日课"
+science = "缓慢均匀的呼吸有助于放松反应和情绪稳定，重点在自然而非强控。"
+caution = "严禁长时间闭气、憋气或追求缺氧感；头晕、胸闷立即恢复自然呼吸。"
+sources = [
+  { name = "钟吕传道集", url = "https://ctext.org/wiki.pl?chapter=209399&if=gb&remap=gb", level = "classic" },
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "xian_cultivation"
+title = "收视返听：金华内守"
+stage = "foundation"
+duration_mins = 10
+frequency = "每周 3-5 次"
+scenes = ["home", "bedtime"]
+summary = "取《太乙金华宗旨》收视返听之意，把外驰的视听收回到内在安静处。"
+steps = [
+  "坐稳，先自然守息 3 分钟",
+  "眼帘轻垂不盯不挤，把看的注意力收回身内",
+  "把听的注意力从外界声音收回到呼吸的声音",
+  "念起时只知道又外驰了，再轻轻收回，10 分钟收尾",
+]
+benefit = "训练从外界刺激回收注意力，适合睡前和高压后收神"
+science = "收视返听可理解为把注意力从外部感官收回到内在锚点，类似专注冥想。"
+caution = "不盯眉心、不强压眼球、不追求光影；出现眼胀、头胀或失眠加重时停止。"
+sources = [
+  { name = "太乙金华宗旨", url = "https://zh.wikisource.org/zh-hans/%E5%A4%AA%E4%B9%99%E9%87%91%E8%8F%AF%E5%AE%97%E6%97%A8", level = "classic" },
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+]
+
+[[practice]]
+category = "xian_cultivation"
+title = "悟真炼己：先正身心"
+stage = "entry"
+duration_mins = 10
+frequency = "开始阶段每日"
+scenes = ["home"]
+summary = "取《悟真篇》先炼己、后筑基之意：先把作息、情绪和心性理顺。"
+steps = [
+  "炼己第一步是稳住作息、饮食和情绪，不急于求高阶功法",
+  "每天觉察一次自己的急躁、贪多和攀比心",
+  "遇到情绪上头时先暂停、慢呼吸，再决定言行",
+  "把修炼目标写小：先做人稳当，再谈进阶",
+]
+benefit = "为后续静功打好心性与生活基础，避免急于求成"
+science = "先建立稳定的作息、情绪调节和现实功能，比追求高阶体验更利于长期坚持与安全。"
+caution = "炼己不是自我苛责或极端禁欲；若陷入强烈自责或功能下降，应减量并寻求支持。"
+sources = [
+  { name = "悟真篇", url = "https://zh.wikisource.org/wiki/%E6%82%9F%E7%9C%9F%E7%AF%87", level = "classic" },
+  { name = "NIH NCCIH Mind and Body Approaches for Stress", url = "https://www.nccih.nih.gov/health/providers/digest/mind-and-body-approaches-for-stress", level = "government" },
+]
