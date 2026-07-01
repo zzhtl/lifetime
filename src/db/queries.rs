@@ -259,6 +259,70 @@ pub fn ts_to_local(ts: i64) -> String {
     local.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
+// ── 养生修炼「打卡」：累计打卡数=修为值，驱动修为境界 ──
+
+/// 记一次修炼打卡（同一天同一功法只计一次，靠 UNIQUE + OR IGNORE 去重）。
+pub fn log_practice(db: &Db, category: &str, title: &str) -> Result<()> {
+    let today = Local::now().format("%Y-%m-%d").to_string();
+    let now = Utc::now().timestamp();
+    db.lock().unwrap().execute(
+        "INSERT OR IGNORE INTO practice_log (logged_date, category, title, logged_at)
+         VALUES (?1, ?2, ?3, ?4)",
+        params![today, category, title, now],
+    )?;
+    Ok(())
+}
+
+/// 累计修炼打卡次数（= 修为值）。
+pub fn practice_points(db: &Db) -> Result<i64> {
+    let conn = db.lock().unwrap();
+    let n = conn.query_row("SELECT COUNT(*) FROM practice_log", [], |r| r.get(0))?;
+    Ok(n)
+}
+
+/// 今日已打卡的功法标题（UI 显示「已修」态并防重复打卡）。
+pub fn practice_logged_today(db: &Db) -> Result<Vec<String>> {
+    let today = Local::now().format("%Y-%m-%d").to_string();
+    let conn = db.lock().unwrap();
+    let mut stmt = conn.prepare("SELECT title FROM practice_log WHERE logged_date = ?1")?;
+    let rows = stmt
+        .query_map(params![today], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+/// 连续修炼天数：从今天（今天未打卡则从昨天）起往前数连续有打卡的天数。
+/// 回溯逻辑与 `streak` 一致，只是达标条件改为「当天有任意打卡」。
+pub fn practice_streak(db: &Db) -> Result<i64> {
+    let conn = db.lock().unwrap();
+    let mut stmt =
+        conn.prepare("SELECT DISTINCT logged_date FROM practice_log ORDER BY logged_date DESC")?;
+    let dates: Vec<NaiveDate> = stmt
+        .query_map([], |r| {
+            let s: String = r.get(0)?;
+            Ok(NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
+        })?
+        .filter_map(|x| x.ok().flatten())
+        .collect();
+
+    let today = Local::now().date_naive();
+    let yesterday = today.pred_opt().unwrap_or(today);
+    let mut count = 0i64;
+    let mut expect = today;
+    for d in dates {
+        if d == expect {
+            count += 1;
+            expect = expect.pred_opt().unwrap_or(expect);
+        } else if count == 0 && d == yesterday {
+            count += 1;
+            expect = d.pred_opt().unwrap_or(d);
+        } else {
+            break;
+        }
+    }
+    Ok(count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -326,6 +390,38 @@ mod tests {
         assert_eq!(last_open_session(&db)?, Some(sid));
         end_session(&db, sid, 100)?;
         assert!(last_open_session(&db)?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn practice_log_dedups_same_day_and_counts_points() -> Result<()> {
+        let db = super::super::open_in_memory()?;
+        log_practice(&db, "diet", "食饮有节")?;
+        log_practice(&db, "diet", "食饮有节")?; // 同日同功法 → 去重
+        log_practice(&db, "mind_breath", "打坐守息")?;
+        assert_eq!(practice_points(&db)?, 2);
+        let today = practice_logged_today(&db)?;
+        assert_eq!(today.len(), 2);
+        assert!(today.contains(&"食饮有节".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn practice_streak_counts_consecutive_days() -> Result<()> {
+        let db = super::super::open_in_memory()?;
+        let today = Local::now().date_naive();
+        // 今天(0)、昨天(1) 连续；大前天(3) 与昨天之间断开 → streak = 2
+        for offset in [0i64, 1, 3] {
+            let date = (today - chrono::Duration::days(offset))
+                .format("%Y-%m-%d")
+                .to_string();
+            db.lock().unwrap().execute(
+                "INSERT INTO practice_log (logged_date, category, title, logged_at)
+                 VALUES (?1, 'x', ?2, 0)",
+                params![date, format!("t{offset}")],
+            )?;
+        }
+        assert_eq!(practice_streak(&db)?, 2);
         Ok(())
     }
 }

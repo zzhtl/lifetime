@@ -4,7 +4,7 @@
 use eframe::egui::{self, Color32, RichText};
 
 use crate::app::App;
-use crate::practices::{Practice, PracticeCategory};
+use crate::practices::{realm_progress, Practice, PracticeCategory, RealmProgress};
 use crate::ui::theme;
 use crate::ui::widgets::badge;
 
@@ -19,6 +19,12 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
     let mut cur: PracticeCategory = ui
         .ctx()
         .memory(|m| m.data.get_temp(key).unwrap_or(PracticeCategory::Diet));
+
+    // 修为境界横幅数据：先 Copy/查出来，避免与下方 practices 借用打架
+    let realm = realm_progress(app.cultivation.points);
+    let streak = crate::db::practice_streak(&app.db).unwrap_or(0);
+    // 打卡点击收集：闭包内 practices 正借用 app，不能同时可变借用，退出后再统一写库
+    let mut pending: Option<(String, String)> = None;
 
     ui.add_space(2.0);
     ui.heading("☯ 养生修炼");
@@ -57,6 +63,8 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
             egui::Layout::top_down(egui::Align::Min),
             |ui| {
                 let accent = rgb(cur.accent());
+                let logged: std::collections::HashSet<String> =
+                    app.cultivation.today_logged.iter().cloned().collect();
                 let practices = app.practices.by_category(cur);
 
                 ui.horizontal(|ui| {
@@ -71,6 +79,10 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
                 });
                 ui.add_space(8.0);
 
+                // 修为境界横幅：打卡成长的核心反馈
+                realm_banner(ui, &realm, streak, accent);
+                ui.add_space(10.0);
+
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
@@ -83,6 +95,14 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
                         }
                         for practice in practices {
                             practice_card(ui, practice, accent);
+                            // 打卡按钮：今日已修则禁用
+                            let done = logged.contains(&practice.title);
+                            if checkin_button(ui, done, accent) {
+                                pending = Some((
+                                    practice.category.key().to_string(),
+                                    practice.title.clone(),
+                                ));
+                            }
                             ui.add_space(12.0);
                         }
                         ui.add_space(4.0);
@@ -90,6 +110,11 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
             },
         );
     });
+
+    // practices 借用已随闭包结束，安全地写入打卡
+    if let Some((category, title)) = pending {
+        app.log_practice(&category, title);
+    }
 
     ui.ctx().memory_mut(|m| m.data.insert_temp(key, cur));
 }
@@ -128,6 +153,63 @@ fn category_button(ui: &mut egui::Ui, c: PracticeCategory, selected: bool) -> bo
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
     resp.clicked()
+}
+
+fn realm_banner(ui: &mut egui::Ui, realm: &RealmProgress, streak: i64, accent: Color32) {
+    egui::Frame::none()
+        .fill(theme::CARD)
+        .stroke(egui::Stroke::new(1.0, accent.linear_multiply(0.6)))
+        .rounding(egui::Rounding::same(10.0))
+        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal(|ui| {
+                ui.label(
+                    RichText::new(format!("⛰ {}", realm.name))
+                        .size(18.0)
+                        .strong()
+                        .color(accent),
+                );
+                ui.add_space(10.0);
+                ui.label(
+                    RichText::new(format!("修为 {}", realm.points))
+                        .size(13.0)
+                        .color(theme::TEXT_WEAK),
+                );
+                if streak > 0 {
+                    ui.add_space(10.0);
+                    ui.label(
+                        RichText::new(format!("🔥 连续修炼 {} 天", streak))
+                            .size(13.0)
+                            .color(theme::WARN),
+                    );
+                }
+            });
+            ui.add_space(6.0);
+            let hint = match realm.next_name {
+                Some(next) => format!("距「{}」还需 {} 次修炼", next, realm.need),
+                None => "已臻化境，修为圆满".to_string(),
+            };
+            ui.add(egui::ProgressBar::new(realm.ratio).text(RichText::new(hint).size(12.0)));
+        });
+}
+
+fn checkin_button(ui: &mut egui::Ui, done: bool, accent: Color32) -> bool {
+    if done {
+        ui.add_enabled(
+            false,
+            egui::Button::new(RichText::new("✅ 今日已修").size(13.0)),
+        );
+        false
+    } else {
+        ui.add(egui::Button::new(
+            RichText::new("✓ 今日修炼打卡")
+                .size(13.0)
+                .strong()
+                .color(accent),
+        ))
+        .clicked()
+    }
 }
 
 fn practice_card(ui: &mut egui::Ui, practice: &Practice, accent: Color32) {
@@ -273,5 +355,29 @@ mod tests {
             assert!(n > 0, "修炼分类 {:?} 没有内容", c);
             assert!(h > 60.0, "修炼分类 {:?} 渲染塌陷: {h}px", c);
         }
+    }
+
+    #[test]
+    fn realm_banner_and_checkin_render_without_panic() {
+        let ctx = egui::Context::default();
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::pos2(0.0, 0.0),
+                egui::vec2(900.0, 700.0),
+            )),
+            ..Default::default()
+        };
+        let _ = ctx.run(input, |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                let accent = Color32::from_rgb(200, 180, 100);
+                // 有下一境界 + 连续天数 > 0
+                realm_banner(ui, &crate::practices::realm_progress(10), 3, accent);
+                // 达顶境界（next_name = None 分支）+ 连续天数 = 0
+                realm_banner(ui, &crate::practices::realm_progress(1000), 0, accent);
+                // 打卡按钮两态
+                let _ = checkin_button(ui, false, accent);
+                let _ = checkin_button(ui, true, accent);
+            });
+        });
     }
 }

@@ -31,6 +31,15 @@ pub struct BreakState {
     pub seg_remaining: u64,
 }
 
+/// 修炼成长运行时状态（内存缓存，避免每帧查库）
+#[derive(Default)]
+pub struct CultivationState {
+    /// 累计修为值（打卡数）
+    pub points: i64,
+    /// 今日已打卡的功法标题
+    pub today_logged: Vec<String>,
+}
+
 pub struct App {
     pub config: Arc<Mutex<Config>>,
     pub db: Db,
@@ -44,6 +53,8 @@ pub struct App {
     pub session_id: Option<i64>,
     pub today: DailySummary,
     pub stats: StatsView,
+    /// 修炼打卡成长状态（修为值 + 今日已打卡）
+    pub cultivation: CultivationState,
 
     pub pending_break: Option<BreakState>,
     /// 上一次大休息跟练用过的动作标题，用于下次避免重复
@@ -66,6 +77,10 @@ impl App {
         let sched = scheduler::spawn(Arc::clone(&config))?;
         let today = db::get_today(&db)?;
         let stats = StatsView::load(&db).unwrap_or_default();
+        let cultivation = CultivationState {
+            points: db::practice_points(&db).unwrap_or(0),
+            today_logged: db::practice_logged_today(&db).unwrap_or_default(),
+        };
         Ok(Self {
             config,
             db,
@@ -78,6 +93,7 @@ impl App {
             session_id: None,
             today,
             stats,
+            cultivation,
             pending_break: None,
             last_break_titles: Vec::new(),
             last_reminder: None,
@@ -185,6 +201,17 @@ impl App {
         if completed {
             self.today.big_breaks += 1;
             let _ = db::upsert_today(&self.db, &self.today);
+        }
+    }
+
+    /// 记一次修炼打卡：写库 + 更新内存缓存（同日同功法幂等，不重复计数）。
+    pub fn log_practice(&mut self, category: &str, title: String) {
+        if self.cultivation.today_logged.contains(&title) {
+            return;
+        }
+        if db::log_practice(&self.db, category, &title).is_ok() {
+            self.cultivation.points += 1;
+            self.cultivation.today_logged.push(title);
         }
     }
 

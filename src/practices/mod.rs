@@ -219,6 +219,72 @@ impl PracticeLibrary {
     }
 }
 
+// ── 修为境界：由「修炼打卡」累计数驱动的成长阶梯 ──
+// 注意：这与 PracticeStage（功法难度标签：入门/筑基/进阶/长期）是两个不同维度，勿混淆。
+// 境界由累计修为值（打卡数）纯函数算出，不额外落库存状态。
+
+/// 修为境界阶梯：(达到该境界所需累计修为值, 境界名)，按门槛升序。
+const REALMS: [(i64, &str); 8] = [
+    (0, "凡尘"),
+    (5, "炼气"),
+    (15, "筑基"),
+    (35, "金丹"),
+    (70, "元婴"),
+    (120, "化神"),
+    (200, "炼虚"),
+    (320, "合道"),
+];
+
+/// 当前修为进度快照，供 UI 渲染境界横幅与进度条。
+#[derive(Debug, Clone, PartialEq)]
+pub struct RealmProgress {
+    /// 当前境界名
+    pub name: &'static str,
+    /// 下一境界名；已达顶境则为 None
+    pub next_name: Option<&'static str>,
+    /// 累计修为值（打卡数）
+    pub points: i64,
+    /// 从当前境界到下一境界还需多少次（已达顶为 0）
+    pub need: i64,
+    /// 当前境界内的进度比例 0.0~1.0（已达顶为 1.0）
+    pub ratio: f32,
+}
+
+/// 由累计修为值（打卡数）计算当前境界与进度。纯函数。
+pub fn realm_progress(points: i64) -> RealmProgress {
+    let p = points.max(0);
+    // 当前境界 = 最后一个门槛 <= p 的那一档（REALMS 按门槛升序）
+    let mut idx = 0usize;
+    for (i, (threshold, _)) in REALMS.iter().enumerate() {
+        if p >= *threshold {
+            idx = i;
+        } else {
+            break;
+        }
+    }
+    let (cur_threshold, name) = REALMS[idx];
+    if idx + 1 < REALMS.len() {
+        let (next_threshold, next_name) = REALMS[idx + 1];
+        let span = (next_threshold - cur_threshold).max(1);
+        let into = p - cur_threshold;
+        RealmProgress {
+            name,
+            next_name: Some(next_name),
+            points: p,
+            need: next_threshold - p,
+            ratio: (into as f32 / span as f32).clamp(0.0, 1.0),
+        }
+    } else {
+        RealmProgress {
+            name,
+            next_name: None,
+            points: p,
+            need: 0,
+            ratio: 1.0,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -317,5 +383,25 @@ mod tests {
         for expected in ["不承诺超自然结果", "严禁长时间闭息", "不自行辟谷断食"] {
             assert!(safety_text.contains(expected), "缺少安全红线: {expected}");
         }
+    }
+
+    #[test]
+    fn realm_progress_maps_points_to_realms() {
+        assert_eq!(realm_progress(0).name, "凡尘");
+        assert_eq!(realm_progress(4).name, "凡尘");
+        assert_eq!(realm_progress(5).name, "炼气"); // 门槛边界
+        assert_eq!(realm_progress(15).name, "筑基");
+
+        let p = realm_progress(10); // 炼气(5)→筑基(15) 正中
+        assert_eq!(p.name, "炼气");
+        assert_eq!(p.next_name, Some("筑基"));
+        assert_eq!(p.need, 5);
+        assert!((p.ratio - 0.5).abs() < 1e-6);
+
+        let top = realm_progress(1000); // 达顶境
+        assert_eq!(top.name, "合道");
+        assert_eq!(top.next_name, None);
+        assert_eq!(top.need, 0);
+        assert_eq!(top.ratio, 1.0);
     }
 }
