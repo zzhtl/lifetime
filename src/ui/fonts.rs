@@ -16,32 +16,101 @@ use eframe::egui::{self, FontData};
 pub fn install_cjk_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
 
-    let candidate = resolve_font();
-    if let Some((bytes, index, source)) = candidate {
-        let name = "cjk".to_owned();
-        let mut data = FontData::from_owned(bytes);
-        data.index = index;
-        fonts.font_data.insert(name.clone(), data);
+    match resolve_font() {
+        Some((bytes, index, source)) => {
+            let name = "cjk".to_owned();
+            let mut data = FontData::from_owned(bytes);
+            data.index = index;
+            fonts.font_data.insert(name.clone(), data);
+            fonts
+                .families
+                .entry(egui::FontFamily::Proportional)
+                .or_default()
+                .insert(0, name.clone());
+            fonts
+                .families
+                .entry(egui::FontFamily::Monospace)
+                .or_default()
+                .push(name);
+            log::info!("已加载中文字体: {source} (face={index})");
+        }
+        None => {
+            log::warn!("未找到系统中文字体，中文将显示为方块。请安装 fonts-noto-cjk 或设置 LIFETIME_FONT 环境变量");
+        }
+    }
+
+    // 符号兜底：egui 内置 emoji 字体覆盖不全，部分图标（如 🌬 U+1F32C、⛰ U+26F0、🪑 U+1FA91）
+    // 会渲染成空白方块。系统 NotoColorEmoji 是位图彩色字体，egui 无法渲染；改用轮廓版
+    // Noto Sans Symbols / Symbols2 作为兜底，追加到各家族末尾（只补空缺、不覆盖已有字形）。
+    for (idx, (bytes, source)) in resolve_symbol_fonts().into_iter().enumerate() {
+        let name = format!("symbols{idx}");
+        fonts.font_data.insert(name.clone(), FontData::from_owned(bytes));
         fonts
             .families
             .entry(egui::FontFamily::Proportional)
             .or_default()
-            .insert(0, name.clone());
+            .push(name.clone());
         fonts
             .families
             .entry(egui::FontFamily::Monospace)
             .or_default()
             .push(name);
-        log::info!("已加载中文字体: {source} (face={index})");
-        ctx.set_fonts(fonts);
-        return;
+        log::info!("已加载符号字体: {source}");
     }
 
-    log::warn!("未找到系统中文字体，中文将显示为方块。请安装 fonts-noto-cjk 或设置 LIFETIME_FONT 环境变量");
     ctx.set_fonts(fonts);
 }
 
 // 提示：字体加载后由 main.rs 调用 theme::install 设置整体风格。
+
+/// 加载轮廓符号字体（Noto Sans Symbols / Symbols2），补齐 egui 内置 emoji 缺失的图标字形。
+/// 返回若干 (字节, 来源描述)，按顺序作为家族末尾的兜底 fallback。
+fn resolve_symbol_fonts() -> Vec<(Vec<u8>, String)> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+
+    // 1) fontconfig 按家族名解析（跨发行版更稳）；fc-match 找不到会回退非符号字体，用文件名过滤
+    for family in ["Noto Sans Symbols2", "Noto Sans Symbols"] {
+        if let Some((path, _)) = run_fc_match(family) {
+            if path.to_lowercase().contains("symbol") && seen.insert(path.clone()) {
+                if let Ok(bytes) = std::fs::read(&path) {
+                    out.push((bytes, format!("fc-match:{path}")));
+                }
+            }
+        }
+    }
+
+    // 2) 静态候选兜底
+    for path in symbol_static_candidates() {
+        if seen.contains(*path) {
+            continue;
+        }
+        if let Ok(bytes) = std::fs::read(path) {
+            seen.insert((*path).to_owned());
+            out.push((bytes, format!("static:{path}")));
+        }
+    }
+    out
+}
+
+/// 已知发行版的轮廓符号字体路径
+fn symbol_static_candidates() -> &'static [&'static str] {
+    #[cfg(target_os = "linux")]
+    {
+        &[
+            "/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf",
+            "/usr/share/fonts/noto/NotoSansSymbols2-Regular.ttf",
+            "/usr/share/fonts/noto/NotoSansSymbols-Regular.ttf",
+            "/usr/share/fonts/google-noto/NotoSansSymbols2-Regular.ttf",
+            "/usr/share/fonts/google-noto/NotoSansSymbols-Regular.ttf",
+        ]
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        &[]
+    }
+}
 
 /// 返回 (字体字节, face index, 来源描述)
 fn resolve_font() -> Option<(Vec<u8>, u32, String)> {

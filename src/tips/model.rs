@@ -48,10 +48,10 @@ impl TipCategory {
     pub fn icon(&self) -> &'static str {
         match self {
             TipCategory::Eyes => "👁",
-            TipCategory::Neck => "🦴",
-            TipCategory::Back => "🧘",
+            TipCategory::Neck => "⚕",
+            TipCategory::Back => "⛹",
             TipCategory::Wrist => "✋",
-            TipCategory::Legs => "🦵",
+            TipCategory::Legs => "⛷",
             TipCategory::Breathing => "🌬",
             TipCategory::Nutrition => "💧",
             TipCategory::Posture => "🪑",
