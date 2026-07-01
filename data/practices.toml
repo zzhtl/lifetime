@@ -2125,3 +2125,95 @@ sources = [
   { name = "悟真篇", url = "https://zh.wikisource.org/wiki/%E6%82%9F%E7%9C%9F%E7%AF%87", level = "classic" },
   { name = "NIH NCCIH Mind and Body Approaches for Stress", url = "https://www.nccih.nih.gov/health/providers/digest/mind-and-body-approaches-for-stress", level = "government" },
 ]
+
+# ══════════════ 呼吸修炼法门（恬淡虚无 · 传统调息法门，非任何现代著作原文）══════════════
+# 说明：以下为佛家安那般那、天台六妙门、十六特胜、庄子心斋等公有领域传统法门，
+# 用中性语言概述其通用方法，供自我练习参考；不承诺特殊效验。
+
+[[practice]]
+category = "mind_breath"
+title = "安那般那：知息出入"
+stage = "foundation"
+duration_mins = 15
+frequency = "每日一次"
+scenes = ["home", "office"]
+summary = "佛家出入息念的入门：不控制呼吸，只是清楚地知道气息在进、在出。"
+steps = [
+  "自然端坐，让呼吸回到本来的样子，不加深也不放慢",
+  "气进来时，心里明白这是入息；气出去时，明白这是出息",
+  "只是知道，不去干涉它的长短快慢",
+  "念头跑了，就把这份『知道』轻轻带回鼻端，练 10-15 分钟",
+]
+benefit = "以觉知呼吸收摄散乱之心，是各家静坐共通的根基"
+science = "觉知呼吸（正念呼吸）是被广泛研究的注意力与放松练习，重点在观察而非控制。"
+caution = "不憋气、不刻意加深呼吸；有过度换气或焦虑倾向者以自然为度，不适即停。"
+sources = [
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "mind_breath"
+title = "六妙门：数息随息"
+stage = "foundation"
+duration_mins = 12
+frequency = "每日一次"
+scenes = ["home", "office"]
+summary = "取天台六妙门前两门『数、随』之意，从散乱一步步收到安定。"
+steps = [
+  "先『数息』：每一次呼气默数一个数，从一数到十，再回到一",
+  "数错或数乱都不必自责，回到一重新开始",
+  "心渐渐安定后转『随息』：不再数，只轻轻跟着气息的出入",
+  "随到呼吸绵细、心息相随，安坐片刻再收功",
+]
+benefit = "用数、随两步搭一道台阶，让心从纷乱平稳落定"
+science = "计数与跟随呼吸都是常见的专注锚点，能帮助减少走神、稳定注意力。"
+caution = "数息只为收心，不追求呼吸快慢；全程不憋气，头晕即停。"
+sources = [
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+]
+
+[[practice]]
+category = "mind_breath"
+title = "十六特胜：观息遍身"
+stage = "advanced"
+duration_mins = 12
+frequency = "每周 3-5 次"
+scenes = ["home"]
+summary = "承传统禅观次第之意，在知息出入之上，再觉察气息的长短与遍身之感。"
+steps = [
+  "先做到能清楚知道气息的出与入",
+  "再留意这一口气是长还是短，只是如实知道，不去改它",
+  "慢慢体会吸气时的清凉、呼气时的松沉，一点点遍及全身",
+  "保持轻松的觉察，不追求任何特殊气感",
+]
+benefit = "由知息进到观息，加深身心的觉察与安定"
+science = "对呼吸细节的持续觉察属于专注—觉察类训练，重在自然观察而非用力。"
+caution = "不刻意拉长呼吸、不追逐气感异象；出现不适即回到自然呼吸并停止。"
+sources = [
+  { name = "NIH NCCIH Meditation and Mindfulness", url = "https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety", level = "government" },
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "mind_breath"
+title = "听息心斋：心息相依"
+stage = "foundation"
+duration_mins = 10
+frequency = "睡前或静坐"
+scenes = ["home", "bedtime"]
+summary = "合《庄子》心斋听息与静坐调息之意，用『听』让心与息相依。"
+steps = [
+  "静坐垂帘，不出声，用一种『听』的感觉去听自己的呼吸",
+  "不是用耳朵使劲听，而是把注意力安放在呼吸的有无上",
+  "听到后来呼吸若有若无，心也随之静下来",
+  "保持心息相依，不昏沉也不紧绷；收功前先动一动身体",
+]
+benefit = "以听息收摄心神，帮助入静与睡前放松"
+science = "把注意力安放在呼吸上的静观练习有助于放松，并为入睡做准备。"
+caution = "昏沉欲睡可睁眼调整；全程不憋气，情绪不适即停。"
+sources = [
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+  { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+]
