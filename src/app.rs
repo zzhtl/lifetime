@@ -6,6 +6,7 @@ use eframe::egui::{self, Color32, RichText};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::breathing::BreathingState;
 use crate::config::Config;
 use crate::db::{self, Db, DailySummary, ReminderAction};
 use crate::practices::PracticeLibrary;
@@ -56,6 +57,15 @@ pub struct App {
     /// 修炼打卡成长状态（修为值 + 今日已打卡）
     pub cultivation: CultivationState,
 
+    /// 呼吸引导练习台运行时状态
+    pub breathing: BreathingState,
+    /// 今日呼吸练习次数
+    pub breathing_count: i64,
+    /// 今日呼吸练习总秒数
+    pub breathing_secs: i64,
+    /// 连续呼吸练习天数
+    pub breathing_streak: i64,
+
     pub pending_break: Option<BreakState>,
     /// 上一次大休息跟练用过的动作标题，用于下次避免重复
     pub last_break_titles: Vec<String>,
@@ -81,6 +91,8 @@ impl App {
             points: db::practice_points(&db).unwrap_or(0),
             today_logged: db::practice_logged_today(&db).unwrap_or_default(),
         };
+        let (breathing_count, breathing_secs) = db::breathing_today(&db).unwrap_or((0, 0));
+        let breathing_streak = db::breathing_streak(&db).unwrap_or(0);
         Ok(Self {
             config,
             db,
@@ -94,6 +106,10 @@ impl App {
             today,
             stats,
             cultivation,
+            breathing: BreathingState::default(),
+            breathing_count,
+            breathing_secs,
+            breathing_streak,
             pending_break: None,
             last_break_titles: Vec::new(),
             last_reminder: None,
@@ -215,6 +231,25 @@ impl App {
         }
     }
 
+    /// 完成一次呼吸练习：写独立明细 + 计入修为（当日 +1，幂等）+ 刷新缓存。
+    /// cycles 为本次完成轮数，duration_secs 为本次时长；轮数为 0 视为无效不记。
+    pub fn finish_breathing(&mut self, pattern_key: &str, cycles: u32, duration_secs: u32) {
+        if cycles == 0 {
+            return;
+        }
+        let _ = db::log_breathing(&self.db, pattern_key, cycles, duration_secs);
+        // 计入修为境界：与全站打卡同一体系，同名当日幂等，最多 +1/天
+        self.log_practice("breathing", "今日呼吸练习".to_string());
+        self.refresh_breathing_stats();
+    }
+
+    fn refresh_breathing_stats(&mut self) {
+        let (count, secs) = db::breathing_today(&self.db).unwrap_or((0, 0));
+        self.breathing_count = count;
+        self.breathing_secs = secs;
+        self.breathing_streak = db::breathing_streak(&self.db).unwrap_or(0);
+    }
+
     pub fn send(&self, cmd: Command) {
         let _ = self.sched.cmd_tx.send(cmd);
     }
@@ -323,6 +358,7 @@ impl eframe::App for App {
         // 中央内容
         egui::CentralPanel::default().show(ctx, |ui| match self.view {
             View::Dashboard => ui::dashboard::render(self, ui),
+            View::Breathing => ui::breathing::render(self, ui),
             View::Library => ui::library::render(self, ui),
             View::Practice => ui::practice::render(self, ui),
             View::Stats => ui::stats_view::render(self, ui),

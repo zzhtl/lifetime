@@ -107,6 +107,8 @@ fn process_command(
         Command::Quit => return true,
         // 试听：仅出声
         Command::TestSound => notifier.beep(Intensity::Medium, cfg.general.volume),
+        // 呼吸引导切拍提示音
+        Command::Beep(intensity) => notifier.beep(intensity, cfg.general.volume),
         // 测试通知：强制发一条示例桌面通知 + 声音，用于即时验证系统通知是否可用
         Command::TestNotify => notifier.dispatch(
             ReminderKind::Eyes,

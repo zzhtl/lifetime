@@ -17,6 +17,7 @@ pub enum PracticeCategory {
     Prevention,
     Immunity,
     MindBreath,
+    Breathing,
     XianCultivation,
 }
 
@@ -31,6 +32,7 @@ impl PracticeCategory {
             PracticeCategory::Prevention => "prevention",
             PracticeCategory::Immunity => "immunity",
             PracticeCategory::MindBreath => "mind_breath",
+            PracticeCategory::Breathing => "breathing",
             PracticeCategory::XianCultivation => "xian_cultivation",
         }
     }
@@ -45,6 +47,7 @@ impl PracticeCategory {
             PracticeCategory::Prevention => "治未病",
             PracticeCategory::Immunity => "正气固本",
             PracticeCategory::MindBreath => "恬淡虚无",
+            PracticeCategory::Breathing => "呼吸法门",
             PracticeCategory::XianCultivation => "修仙次第",
         }
     }
@@ -59,6 +62,7 @@ impl PracticeCategory {
             PracticeCategory::Prevention => "🛡",
             PracticeCategory::Immunity => "🔥",
             PracticeCategory::MindBreath => "🌬",
+            PracticeCategory::Breathing => "☁",
             PracticeCategory::XianCultivation => "⛰",
         }
     }
@@ -73,12 +77,13 @@ impl PracticeCategory {
             PracticeCategory::Prevention => (0x7f, 0xb1, 0xe0),
             PracticeCategory::Immunity => (0x8f, 0xc4, 0x68),
             PracticeCategory::MindBreath => (0x6f, 0xc2, 0xb8),
+            PracticeCategory::Breathing => (0x7f, 0xb4, 0xd8),
             PracticeCategory::XianCultivation => (0xd0, 0xc0, 0x72),
         }
     }
 
     pub fn all() -> &'static [PracticeCategory] {
-        const ALL: [PracticeCategory; 9] = [
+        const ALL: [PracticeCategory; 10] = [
             PracticeCategory::Diet,
             PracticeCategory::WalkingRunning,
             PracticeCategory::TaijiQigong,
@@ -87,6 +92,7 @@ impl PracticeCategory {
             PracticeCategory::Prevention,
             PracticeCategory::Immunity,
             PracticeCategory::MindBreath,
+            PracticeCategory::Breathing,
             PracticeCategory::XianCultivation,
         ];
         &ALL
@@ -345,6 +351,23 @@ mod tests {
             assert!(
                 titles.iter().any(|title| title.contains(expected)),
                 "缺少练气法门: {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn breathing_includes_modern_evidence_based_methods() {
+        let lib = PracticeLibrary::load().unwrap();
+        let titles: Vec<&str> = lib
+            .by_category(PracticeCategory::Breathing)
+            .into_iter()
+            .map(|p| p.title.as_str())
+            .collect();
+        // 顶层「呼吸法门」练习台预设对应的现代法门，不可缺失
+        for expected in ["4-7-8", "箱式", "生理叹息", "共振", "腹式", "延长呼气"] {
+            assert!(
+                titles.iter().any(|title| title.contains(expected)),
+                "缺少现代呼吸法门: {expected}"
             );
         }
     }

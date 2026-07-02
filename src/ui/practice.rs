@@ -19,6 +19,10 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
     let mut cur: PracticeCategory = ui
         .ctx()
         .memory(|m| m.data.get_temp(key).unwrap_or(PracticeCategory::Diet));
+    // 呼吸法门已独立为顶层页；若记忆里残留该分类则回退，避免右栏内容无对应导航
+    if cur == PracticeCategory::Breathing {
+        cur = PracticeCategory::Diet;
+    }
 
     // 修为境界横幅数据：先 Copy/查出来，避免与下方 practices 借用打架
     let realm = realm_progress(app.cultivation.points);
@@ -48,6 +52,10 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
             |ui| {
                 ui.set_min_width(NAV_W);
                 for c in PracticeCategory::all() {
+                    // 呼吸法门已独立为顶层页，不在修炼页导航中重复出现
+                    if *c == PracticeCategory::Breathing {
+                        continue;
+                    }
                     if category_button(ui, *c, cur == *c) {
                         cur = *c;
                     }
@@ -194,7 +202,7 @@ fn realm_banner(ui: &mut egui::Ui, realm: &RealmProgress, streak: i64, accent: C
         });
 }
 
-fn checkin_button(ui: &mut egui::Ui, done: bool, accent: Color32) -> bool {
+pub(crate) fn checkin_button(ui: &mut egui::Ui, done: bool, accent: Color32) -> bool {
     if done {
         ui.add_enabled(
             false,
@@ -212,7 +220,7 @@ fn checkin_button(ui: &mut egui::Ui, done: bool, accent: Color32) -> bool {
     }
 }
 
-fn practice_card(ui: &mut egui::Ui, practice: &Practice, accent: Color32) {
+pub(crate) fn practice_card(ui: &mut egui::Ui, practice: &Practice, accent: Color32) {
     egui::Frame::none()
         .fill(theme::CARD)
         .stroke(egui::Stroke::new(1.0, theme::STROKE))

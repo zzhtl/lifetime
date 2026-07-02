@@ -136,8 +136,8 @@ impl Engine {
             Command::TriggerNow(kind) => {
                 out.triggered = Some(kind);
             }
-            // 测试类指令不影响调度状态，由 run_loop 直接处理副作用
-            Command::TestSound | Command::TestNotify | Command::Quit => {}
+            // 出声/测试类指令不影响调度状态，由 run_loop 直接处理副作用
+            Command::TestSound | Command::TestNotify | Command::Beep(_) | Command::Quit => {}
         }
         out
     }

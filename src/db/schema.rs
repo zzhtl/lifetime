@@ -4,7 +4,7 @@
 use anyhow::Result;
 use rusqlite::Connection;
 
-const CURRENT_VERSION: i32 = 2;
+const CURRENT_VERSION: i32 = 3;
 
 pub fn migrate(conn: &Connection) -> Result<()> {
     let version: i32 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
@@ -15,6 +15,9 @@ pub fn migrate(conn: &Connection) -> Result<()> {
     }
     if version < 2 {
         conn.execute_batch(V2_SQL)?;
+    }
+    if version < 3 {
+        conn.execute_batch(V3_SQL)?;
     }
     if version < CURRENT_VERSION {
         conn.pragma_update(None, "user_version", CURRENT_VERSION)?;
@@ -67,4 +70,19 @@ CREATE TABLE IF NOT EXISTS practice_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_practice_log_date ON practice_log(logged_date);
+"#;
+
+// v3：呼吸练习明细日志。与 practice_log 不同——不去重，逐次记录每次跟练的
+// 轮数与时长，用于「今日次数/时长」与「连续练习天数」独立统计。
+const V3_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS breathing_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    logged_date   TEXT NOT NULL,
+    pattern       TEXT NOT NULL,
+    cycles        INTEGER NOT NULL,
+    duration_secs INTEGER NOT NULL,
+    logged_at     INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_breathing_log_date ON breathing_log(logged_date);
 "#;

@@ -2131,7 +2131,7 @@ sources = [
 # 用中性语言概述其通用方法，供自我练习参考；不承诺特殊效验。
 
 [[practice]]
-category = "mind_breath"
+category = "breathing"
 title = "安那般那：知息出入"
 stage = "foundation"
 duration_mins = 15
@@ -2153,7 +2153,7 @@ sources = [
 ]
 
 [[practice]]
-category = "mind_breath"
+category = "breathing"
 title = "六妙门：数息随息"
 stage = "foundation"
 duration_mins = 12
@@ -2175,7 +2175,7 @@ sources = [
 ]
 
 [[practice]]
-category = "mind_breath"
+category = "breathing"
 title = "十六特胜：观息遍身"
 stage = "advanced"
 duration_mins = 12
@@ -2197,7 +2197,7 @@ sources = [
 ]
 
 [[practice]]
-category = "mind_breath"
+category = "breathing"
 title = "听息心斋：心息相依"
 stage = "foundation"
 duration_mins = 10
@@ -2216,4 +2216,140 @@ caution = "昏沉欲睡可睁眼调整；全程不憋气，情绪不适即停。
 sources = [
   { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
   { name = "黄帝内经·素问·上古天真论", url = "https://ctext.org/huangdi-neijing/shang-gu-tian-zhen-lun/zhs", level = "classic" },
+]
+
+# ══════════════ 现代循证呼吸法（与顶层「呼吸法门」练习台预设一一对应）══════════════
+# 说明：以下为公共卫生/医学机构介绍的常见呼吸练习，用中性语言概述方法与适用，
+# 时长节律与练习台节拍器一致，可点卡片「跟练」直接载入。均为放松类练习，非医疗手段。
+
+[[practice]]
+category = "breathing"
+title = "4-7-8 呼吸法：延长呼气助眠"
+stage = "entry"
+duration_mins = 4
+frequency = "睡前或紧张时"
+scenes = ["home", "bedtime"]
+summary = "吸气 4 拍、屏息 7 拍、呼气 8 拍的固定节律，用较长的呼气帮助身心慢下来。"
+steps = [
+  "舌尖轻抵上颚，用鼻子安静吸气，心里数 4 拍",
+  "屏住呼吸数 7 拍（若不适可缩短，不勉强）",
+  "用嘴缓缓呼气数 8 拍，让气尽量吐长",
+  "以上为一轮，先做 4 轮，熟练后再逐渐增加",
+]
+benefit = "延长呼气、放慢节奏，帮助睡前或紧张时平静下来"
+science = "刻意放慢呼吸、让呼气长于吸气常被用于放松训练；4-7-8 是其中一种固定节律。"
+caution = "孕妇、低血压、心肺疾病或屏息易头晕者不要勉强屏息，可缩短或改自然呼吸；头晕即停。"
+sources = [
+  { name = "Cleveland Clinic: 4-7-8 Breathing", url = "https://health.clevelandclinic.org/4-7-8-breathing", level = "medical_center" },
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "breathing"
+title = "箱式呼吸：四方等长稳心神"
+stage = "entry"
+duration_mins = 5
+frequency = "需要专注或稳定情绪时"
+scenes = ["office", "home"]
+summary = "吸气、屏息、呼气、再屏息各 4 拍，像沿正方形四条边走一圈，四段等长。"
+steps = [
+  "缓缓吸气 4 拍",
+  "屏住 4 拍",
+  "缓缓呼气 4 拍",
+  "再屏住 4 拍，如此循环为一轮",
+]
+benefit = "等长的节律感有助于收摄注意力、稳定情绪"
+science = "等时相的慢呼吸（box breathing）是常见的专注与情绪稳定练习，被广泛用于压力管理。"
+caution = "屏息以舒适为度；孕妇、低血压、心肺疾病者可去掉屏息只做吸呼；不适即停。"
+sources = [
+  { name = "Cleveland Clinic: Box Breathing", url = "https://health.clevelandclinic.org/box-breathing-benefits", level = "medical_center" },
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "breathing"
+title = "生理叹息：双吸长呼快速减压"
+stage = "entry"
+duration_mins = 3
+frequency = "紧张或烦躁时随时"
+scenes = ["office", "home", "outdoor"]
+summary = "先吸一口气到八分满，再补吸一小口到十分，然后缓缓长呼；重复几次即可快速平复。"
+steps = [
+  "用鼻子吸一口气，到肺的八分满",
+  "紧接着再补吸一小口，把肺填到十分满",
+  "再用嘴或鼻缓缓地把气长长地呼出去",
+  "重复 3-5 次；平时也可偶尔自然地叹一口气",
+]
+benefit = "用一次到位的长呼气快速卸掉紧绷，适合工间或情绪上头时"
+science = "『生理叹息』（双吸一长呼）是自发调节呼吸的一种方式，有研究将其用于快速放松练习。"
+caution = "不要连续过度用力吸气以免头晕；感到眩晕就恢复自然呼吸并停止。"
+sources = [
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+  { name = "Harvard Health: Breath control helps quell stress", url = "https://www.health.harvard.edu/mind-and-mood/relaxation-techniques-breath-control-helps-quell-errant-stress-response", level = "medical_center" },
+]
+
+[[practice]]
+category = "breathing"
+title = "共振呼吸：每分钟六息"
+stage = "foundation"
+duration_mins = 6
+frequency = "每日一次"
+scenes = ["home", "office"]
+summary = "把呼吸放慢到每分钟约 5-6 次，吸气和呼气大致等长（各约 5-6 秒），均匀绵长。"
+steps = [
+  "自然坐直，用鼻子吸气约 5-6 秒",
+  "再缓缓呼气约 5-6 秒，吸呼尽量等长",
+  "保持平顺，不憋气、不用力",
+  "持续 5-10 分钟，让节奏稳定下来",
+]
+benefit = "均匀的慢呼吸有助于放松、平衡自主神经的张弛"
+science = "每分钟约 6 次的慢呼吸（共振/相干呼吸）常见于放松与心率变异性相关练习。"
+caution = "以舒适为度，不要为凑时长而憋气；头晕或不适即回到自然呼吸。"
+sources = [
+  { name = "Harvard Health: Breath control helps quell stress", url = "https://www.health.harvard.edu/mind-and-mood/relaxation-techniques-breath-control-helps-quell-errant-stress-response", level = "medical_center" },
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "breathing"
+title = "腹式深呼吸：膈肌带动"
+stage = "entry"
+duration_mins = 5
+frequency = "每日 1-2 次"
+scenes = ["office", "home"]
+summary = "手放肚子上，吸气时让腹部鼓起、胸口少动，用横膈膜带动呼吸，吸 4 呼 6。"
+steps = [
+  "一手放胸口，一手放肚脐上方",
+  "用鼻子吸气约 4 拍，感觉肚子上的手被顶起，胸口尽量少动",
+  "缓缓呼气约 6 拍，肚子回落",
+  "重复几分钟，保持轻松均匀",
+]
+benefit = "用膈肌带动的深慢呼吸帮助放松，减少浅快的胸式呼吸"
+science = "膈肌（腹式）呼吸是常见的放松训练方法，强调用横膈膜带动、放慢呼吸。"
+caution = "不要刻意用力鼓肚子；腹部术后或不适者量力而行，不适即停。"
+sources = [
+  { name = "Harvard Health: Learning diaphragmatic breathing", url = "https://www.health.harvard.edu/healthbeat/learning-diaphragmatic-breathing", level = "medical_center" },
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+]
+
+[[practice]]
+category = "breathing"
+title = "延长呼气：呼倍于吸"
+stage = "entry"
+duration_mins = 4
+frequency = "紧张或睡前"
+scenes = ["home", "bedtime"]
+summary = "让呼气比吸气更长，例如吸 4 呼 8，把注意力放在缓缓吐气上。"
+steps = [
+  "用鼻子自然吸气约 4 拍",
+  "缓缓呼气约 8 拍，像轻轻吹一根蜡烛但不让它灭",
+  "不憋气、不用力，呼气尽量平稳绵长",
+  "重复几分钟即可",
+]
+benefit = "偏向放松的一侧，帮助在紧张或睡前把节奏慢下来"
+science = "让呼气长于吸气是放松类呼吸的常见做法，重点在平稳缓慢而非用力。"
+caution = "呼气不要憋到难受；头晕或心悸即恢复自然呼吸并停止。"
+sources = [
+  { name = "NIH NCCIH Relaxation Techniques", url = "https://www.nccih.nih.gov/health/relaxation-techniques-what-you-need-to-know", level = "government" },
+  { name = "Harvard Health: Breath control helps quell stress", url = "https://www.health.harvard.edu/mind-and-mood/relaxation-techniques-breath-control-helps-quell-errant-stress-response", level = "medical_center" },
 ]

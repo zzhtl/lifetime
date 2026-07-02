@@ -1,6 +1,6 @@
 // Scheduler 内/外消息定义
 
-use crate::reminders::ReminderKind;
+use crate::reminders::{Intensity, ReminderKind};
 use std::time::Duration;
 
 /// UI → Scheduler 控制指令
@@ -21,6 +21,8 @@ pub enum Command {
     TriggerNow(ReminderKind),
     /// 试听提示音（设置页"试听"按钮）
     TestSound,
+    /// 播放一次提示音（呼吸引导切拍用）
+    Beep(Intensity),
     /// 测试桌面通知（设置页"测试通知"按钮，强制发出一条示例通知）
     TestNotify,
     /// 退出线程

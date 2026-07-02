@@ -323,9 +323,82 @@ pub fn practice_streak(db: &Db) -> Result<i64> {
     Ok(count)
 }
 
+// ── 呼吸练习明细：次数 / 时长 / 连续天数（独立于修为打卡）──
+
+/// 记一次呼吸练习（不去重，逐次累加）。
+pub fn log_breathing(db: &Db, pattern: &str, cycles: u32, duration_secs: u32) -> Result<()> {
+    let today = Local::now().format("%Y-%m-%d").to_string();
+    let now = Utc::now().timestamp();
+    db.lock().unwrap().execute(
+        "INSERT INTO breathing_log (logged_date, pattern, cycles, duration_secs, logged_at)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![today, pattern, cycles as i64, duration_secs as i64, now],
+    )?;
+    Ok(())
+}
+
+/// 今日呼吸练习 (次数, 总秒数)。
+pub fn breathing_today(db: &Db) -> Result<(i64, i64)> {
+    let today = Local::now().format("%Y-%m-%d").to_string();
+    let conn = db.lock().unwrap();
+    let row = conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(duration_secs), 0)
+         FROM breathing_log WHERE logged_date = ?1",
+        params![today],
+        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
+    )?;
+    Ok(row)
+}
+
+/// 连续呼吸练习天数（今日未练则从昨日起算），回溯逻辑同 practice_streak。
+pub fn breathing_streak(db: &Db) -> Result<i64> {
+    let conn = db.lock().unwrap();
+    let mut stmt =
+        conn.prepare("SELECT DISTINCT logged_date FROM breathing_log ORDER BY logged_date DESC")?;
+    let dates: Vec<NaiveDate> = stmt
+        .query_map([], |r| {
+            let s: String = r.get(0)?;
+            Ok(NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
+        })?
+        .filter_map(|x| x.ok().flatten())
+        .collect();
+
+    let today = Local::now().date_naive();
+    let yesterday = today.pred_opt().unwrap_or(today);
+    let mut count = 0i64;
+    let mut expect = today;
+    for d in dates {
+        if d == expect {
+            count += 1;
+            expect = expect.pred_opt().unwrap_or(expect);
+        } else if count == 0 && d == yesterday {
+            count += 1;
+            expect = d.pred_opt().unwrap_or(d);
+        } else {
+            break;
+        }
+    }
+    Ok(count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn breathing_log_counts_and_streak() -> Result<()> {
+        let db = super::super::open_in_memory()?;
+        assert_eq!(breathing_today(&db)?, (0, 0));
+        assert_eq!(breathing_streak(&db)?, 0);
+
+        log_breathing(&db, "478", 4, 76)?;
+        log_breathing(&db, "box", 6, 96)?;
+        let (count, secs) = breathing_today(&db)?;
+        assert_eq!(count, 2, "今日应记两次");
+        assert_eq!(secs, 76 + 96, "今日总秒数应为两次之和");
+        assert_eq!(breathing_streak(&db)?, 1, "今日有练则连续天数至少 1");
+        Ok(())
+    }
 
     #[test]
     fn roundtrip_session_and_event() -> Result<()> {
