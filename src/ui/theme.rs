@@ -1,4 +1,4 @@
-// 全局视觉风格：柔和深色主题 + 统一间距/圆角/字号层级
+// 全局视觉风格：现代桌面骨架 + 东方养生配色
 //
 // 在 fonts 之后、App 创建之前由 main.rs 调用一次。
 
@@ -6,19 +6,21 @@ use eframe::egui::{
     self, Color32, FontFamily, FontId, Margin, Rounding, Stroke, TextStyle,
 };
 
-// ── 调色板（整个 UI 统一引用，避免散落的魔法色值）─────────────────
-pub const BG: Color32 = Color32::from_rgb(0x15, 0x18, 0x1d); // 最底层背景
-pub const PANEL: Color32 = Color32::from_rgb(0x1b, 0x1f, 0x26); // 顶栏/侧栏
-pub const CARD: Color32 = Color32::from_rgb(0x23, 0x28, 0x31); // 卡片/分组
-pub const CARD_HOVER: Color32 = Color32::from_rgb(0x2b, 0x31, 0x3c);
-pub const STROKE: Color32 = Color32::from_rgb(0x33, 0x3a, 0x45); // 描边
-pub const TEXT: Color32 = Color32::from_rgb(0xe7, 0xea, 0xee); // 主文字
-pub const TEXT_WEAK: Color32 = Color32::from_rgb(0x97, 0x9f, 0xab); // 次要文字
+// ── 调色板（墨、玉、金、朱、青）──────────────────────────────
+pub const BG: Color32 = Color32::from_rgb(0x10, 0x16, 0x14);
+pub const PANEL: Color32 = Color32::from_rgb(0x16, 0x1e, 0x1b);
+pub const CARD: Color32 = Color32::from_rgb(0x1c, 0x27, 0x22);
+pub const CARD_ALT: Color32 = Color32::from_rgb(0x22, 0x2f, 0x29);
+pub const CARD_HOVER: Color32 = Color32::from_rgb(0x27, 0x35, 0x2f);
+pub const STROKE: Color32 = Color32::from_rgb(0x30, 0x41, 0x39);
+pub const TEXT: Color32 = Color32::from_rgb(0xec, 0xf1, 0xee);
+pub const TEXT_WEAK: Color32 = Color32::from_rgb(0x97, 0xa8, 0x9f);
 
-pub const ACCENT: Color32 = Color32::from_rgb(0x4c, 0xc2, 0x7d); // 品牌绿
-pub const INFO: Color32 = Color32::from_rgb(0x6f, 0xb0, 0xe0); // 科学依据·蓝
-pub const WARN: Color32 = Color32::from_rgb(0xe0, 0xb1, 0x5e); // 注意事项·琥珀
-pub const PURPLE: Color32 = Color32::from_rgb(0xb6, 0x8f, 0xe0); // 进阶变式·紫
+pub const ACCENT: Color32 = Color32::from_rgb(0x2d, 0xb6, 0x9c);
+pub const INFO: Color32 = Color32::from_rgb(0x72, 0xa9, 0xc5);
+pub const WARN: Color32 = Color32::from_rgb(0xd4, 0xb3, 0x6a);
+pub const DANGER: Color32 = Color32::from_rgb(0xd7, 0x74, 0x61);
+pub const PURPLE: Color32 = Color32::from_rgb(0xa5, 0x8b, 0xc6);
 
 /// 安装主题（仅调用一次）。
 pub fn install(ctx: &egui::Context) {
@@ -27,7 +29,7 @@ pub fn install(ctx: &egui::Context) {
     // —— 字号层级 ——
     use FontFamily::{Monospace, Proportional};
     style.text_styles = [
-        (TextStyle::Heading, FontId::new(21.0, Proportional)),
+        (TextStyle::Heading, FontId::new(20.0, Proportional)),
         (TextStyle::Body, FontId::new(15.0, Proportional)),
         (TextStyle::Button, FontId::new(15.0, Proportional)),
         (TextStyle::Small, FontId::new(12.5, Proportional)),
@@ -38,11 +40,11 @@ pub fn install(ctx: &egui::Context) {
     // —— 间距 ——
     let s = &mut style.spacing;
     s.item_spacing = egui::vec2(8.0, 8.0);
-    s.button_padding = egui::vec2(12.0, 6.0);
+    s.button_padding = egui::vec2(12.0, 7.0);
     s.menu_margin = Margin::same(8.0);
     s.window_margin = Margin::same(12.0);
     s.indent = 18.0;
-    s.interact_size.y = 30.0;
+    s.interact_size.y = 32.0;
 
     // —— 配色 ——
     let mut v = egui::Visuals::dark();
@@ -56,8 +58,8 @@ pub fn install(ctx: &egui::Context) {
     v.selection.bg_fill = ACCENT.linear_multiply(0.35);
     v.selection.stroke = Stroke::new(1.0, ACCENT);
 
-    let rounding = Rounding::same(8.0);
-    v.window_rounding = Rounding::same(10.0);
+    let rounding = Rounding::same(7.0);
+    v.window_rounding = Rounding::same(8.0);
     v.menu_rounding = rounding;
 
     // 各交互态控件

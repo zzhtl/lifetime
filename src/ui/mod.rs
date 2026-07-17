@@ -1,5 +1,5 @@
 // UI 模块
-// 顶层路由：Dashboard / 知识库 / 统计 / 设置 / 关于
+// 顶层路由：主页 / 呼吸 / 知识库 / 修炼 / 统计 / 设置
 
 pub mod break_window;
 pub mod breathing;
@@ -22,7 +22,6 @@ pub enum View {
     Practice,
     Stats,
     Settings,
-    About,
 }
 
 impl Default for View {
@@ -40,32 +39,45 @@ impl View {
             View::Practice => "养生修炼",
             View::Stats => "统计",
             View::Settings => "设置",
-            View::About => "关于",
         }
     }
 
     pub fn icon(self) -> &'static str {
         match self {
-            View::Dashboard => "📊",
-            View::Breathing => "🌬",
-            View::Library => "📚",
-            View::Practice => "☯",
-            View::Stats => "📈",
+            View::Dashboard => "⌂",
+            View::Breathing => "◌",
+            View::Library => "▤",
+            View::Practice => "◇",
+            View::Stats => "▥",
             View::Settings => "⚙",
-            View::About => "ℹ",
         }
     }
 
     pub fn all() -> &'static [View] {
-        const ALL: [View; 7] = [
+        const ALL: [View; 6] = [
             View::Dashboard,
             View::Breathing,
             View::Library,
             View::Practice,
             View::Stats,
             View::Settings,
-            View::About,
         ];
         &ALL
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn primary_navigation_has_six_unique_views() {
+        let all = View::all();
+        assert_eq!(all.len(), 6);
+        for (index, view) in all.iter().enumerate() {
+            assert!(!view.label().is_empty());
+            assert!(!view.icon().is_empty());
+            assert!(!all[..index].contains(view), "一级导航存在重复项: {view:?}");
+        }
     }
 }

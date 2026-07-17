@@ -13,27 +13,19 @@ use crate::reminders::Intensity;
 use crate::scheduler::Command;
 use crate::ui::practice::{checkin_button, practice_card};
 use crate::ui::theme;
-use crate::ui::widgets::{badge, stat_card};
+use crate::ui::widgets::{self, badge, stat_card};
 
 fn rgb(c: (u8, u8, u8)) -> Color32 {
     Color32::from_rgb(c.0, c.1, c.2)
 }
 
 pub fn render(app: &mut App, ui: &mut egui::Ui) {
-    ui.add_space(2.0);
-    ui.heading("🌬 呼吸法门");
-    ui.add_space(4.0);
-    ui.add(
-        egui::Label::new(
-            RichText::new("选一种呼吸法，点开始，让圆圈带你一呼一吸。吸气时圆圈涨大，呼气时缩小。")
-                .size(13.0)
-                .color(theme::TEXT_WEAK),
-        )
-        .wrap(),
+    widgets::page_header(
+        ui,
+        "呼吸法门",
+        "选择一种节律，让圆圈带你一呼一吸；提示音与目标轮数可随时调整。",
     );
-    ui.add_space(6.0);
-    ui.separator();
-    ui.add_space(8.0);
+    ui.add_space(14.0);
 
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
@@ -51,18 +43,37 @@ fn pacer_section(app: &mut App, ui: &mut egui::Ui) {
     // ① 预设选择器（点击后统一应用，避免遍历时可变借用冲突）
     let cur_idx = app.breathing.pattern_idx;
     let mut select: Option<usize> = None;
-    ui.horizontal_wrapped(|ui| {
+    egui::Frame::none()
+        .fill(theme::CARD_ALT)
+        .rounding(8.0)
+        .inner_margin(egui::Margin::symmetric(8.0, 6.0))
+        .show(ui, |ui| ui.horizontal_wrapped(|ui| {
         for (i, pat) in BREATHING_PATTERNS.iter().enumerate() {
             let selected = i == cur_idx;
             let accent = rgb(pat.accent);
             let txt = RichText::new(pat.name)
                 .size(13.5)
                 .color(if selected { accent } else { theme::TEXT });
-            if ui.selectable_label(selected, txt).clicked() {
+            if ui
+                .add(
+                    egui::Button::new(txt)
+                        .fill(if selected {
+                            accent.linear_multiply(0.20)
+                        } else {
+                            Color32::TRANSPARENT
+                        })
+                        .stroke(if selected {
+                            egui::Stroke::new(1.0, accent.linear_multiply(0.55))
+                        } else {
+                            egui::Stroke::NONE
+                        }),
+                )
+                .clicked()
+            {
                 select = Some(i);
             }
         }
-    });
+    }));
     if let Some(i) = select {
         app.breathing.select(i);
     }
@@ -109,7 +120,7 @@ fn pacer_section(app: &mut App, ui: &mut egui::Ui) {
     egui::Frame::none()
         .fill(theme::CARD)
         .stroke(egui::Stroke::new(1.0, accent.linear_multiply(0.4)))
-        .rounding(egui::Rounding::same(12.0))
+        .rounding(egui::Rounding::same(8.0))
         .inner_margin(egui::Margin::symmetric(16.0, 14.0))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
@@ -129,6 +140,7 @@ fn pacer_section(app: &mut App, ui: &mut egui::Ui) {
             ui.add(
                 egui::ProgressBar::new(ratio.clamp(0.0, 1.0))
                     .desired_width(ui.available_width().min(360.0))
+                    .fill(accent)
                     .text(
                         RichText::new(format!("{} / {} 轮", completed, app.breathing.target_cycles))
                             .size(12.0),
@@ -233,16 +245,16 @@ fn controls(app: &mut App, ui: &mut egui::Ui, accent: Color32) {
         ui.separator();
 
         if app.breathing.running {
-            if ui.button("⏸ 暂停").clicked() {
+            if ui.button("Ⅱ  暂停").clicked() {
                 app.breathing.pause();
             }
         } else {
             let label = if app.breathing.session_logged {
-                "▶ 再来一次"
+                "▶  再来一次"
             } else if app.breathing.elapsed() > 0.0 {
-                "▶ 继续"
+                "▶  继续"
             } else {
-                "▶ 开始"
+                "▶  开始"
             };
             if ui
                 .button(RichText::new(label).strong().color(accent))
@@ -251,7 +263,7 @@ fn controls(app: &mut App, ui: &mut egui::Ui, accent: Color32) {
                 app.breathing.start();
             }
         }
-        if ui.button("⟲ 重置").clicked() {
+        if ui.button("↺").on_hover_text("重置练习").clicked() {
             app.breathing.reset();
         }
 
@@ -266,24 +278,26 @@ fn controls(app: &mut App, ui: &mut egui::Ui, accent: Color32) {
 
 /// 今日呼吸统计横幅
 fn stats_banner(app: &App, ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
+    widgets::section_header(ui, "今日呼吸", None);
+    ui.add_space(8.0);
+    ui.horizontal_wrapped(|ui| {
         stat_card(
             ui,
-            "🌬",
+            "息",
             format!("{}", app.breathing_count),
             "今日次数",
             theme::INFO,
         );
         stat_card(
             ui,
-            "⏱",
+            "时",
             format!("{} 分", app.breathing_secs / 60),
             "今日时长",
             theme::ACCENT,
         );
         stat_card(
             ui,
-            "🔥",
+            "续",
             format!("{} 天", app.breathing_streak),
             "连续练习",
             theme::WARN,
@@ -294,29 +308,30 @@ fn stats_banner(app: &App, ui: &mut egui::Ui) {
 /// 呼吸法门图文库：卡片 + 「跟练」联动 + 打卡（计入修为）
 fn library_section(app: &mut App, ui: &mut egui::Ui) {
     let accent = rgb(PracticeCategory::Breathing.accent());
-    ui.horizontal(|ui| {
-        ui.label(
-            RichText::new("呼吸法门 · 图文详解")
-                .size(16.0)
-                .strong()
-                .color(accent),
-        );
-        let n = app.practices.by_category(PracticeCategory::Breathing).len();
-        ui.label(
-            RichText::new(format!("· {} 法", n))
-                .size(12.5)
-                .color(theme::TEXT_WEAK),
-        );
-    });
+    let count = app.practices.by_category(PracticeCategory::Breathing).len();
+    widgets::section_header(ui, "呼吸法门详解", Some(&format!("{count} 项功法")));
     ui.add_space(8.0);
 
     let logged: HashSet<String> = app.cultivation.today_logged.iter().cloned().collect();
     let practices = app.practices.by_category(PracticeCategory::Breathing);
     let mut pending_checkin: Option<String> = None;
     let mut start_pattern: Option<usize> = None;
+    let open_key = egui::Id::new("breathing_open_practice");
+    let mut open_title: Option<String> = ui
+        .ctx()
+        .memory(|memory| memory.data.get_temp(open_key).unwrap_or_default());
 
     for practice in practices {
-        practice_card(ui, practice, accent);
+        let expanded = open_title.as_deref() == Some(practice.title.as_str());
+        if practice_card(ui, practice, accent, expanded) {
+            open_title = if expanded {
+                None
+            } else {
+                Some(practice.title.clone())
+            };
+            ui.ctx().request_repaint();
+        }
+        ui.add_space(5.0);
         ui.horizontal(|ui| {
             // 若该法门对应某练习台预设，给一个「跟练」入口
             if let Some(idx) = pattern_index_for(&practice.title) {
@@ -334,6 +349,9 @@ fn library_section(app: &mut App, ui: &mut egui::Ui) {
         });
         ui.add_space(12.0);
     }
+
+    ui.ctx()
+        .memory_mut(|memory| memory.data.insert_temp(open_key, open_title));
 
     // practices 的不可变借用已随 for 消费结束，安全地写回
     if let Some(idx) = start_pattern {

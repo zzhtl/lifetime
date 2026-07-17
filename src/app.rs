@@ -2,9 +2,9 @@
 
 use anyhow::Result;
 use chrono::Local;
-use eframe::egui::{self, Color32, RichText};
+use eframe::egui::{self, RichText};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::breathing::BreathingState;
 use crate::config::Config;
@@ -15,6 +15,7 @@ use crate::scheduler::{self, Command, RunState, SchedulerEvent, SchedulerHandle}
 use crate::stats::StatsView;
 use crate::tips::{Library, RoutineSegment, TipCategory};
 use crate::ui::{self, View};
+use crate::ui::widgets::NoticeKind;
 
 /// 模态休息窗状态（大休息「分段跟练」）
 pub struct BreakState {
@@ -39,6 +40,12 @@ pub struct CultivationState {
     pub points: i64,
     /// 今日已打卡的功法标题
     pub today_logged: Vec<String>,
+}
+
+pub struct Notice {
+    pub kind: NoticeKind,
+    pub message: String,
+    pub created_at: Instant,
 }
 
 pub struct App {
@@ -66,12 +73,15 @@ pub struct App {
     /// 连续呼吸练习天数
     pub breathing_streak: i64,
 
+    /// 设置页的独立草稿；未保存时不影响调度线程读取的共享配置。
+    pub settings: ui::settings::SettingsState,
+
     pub pending_break: Option<BreakState>,
     /// 上一次大休息跟练用过的动作标题，用于下次避免重复
     pub last_break_titles: Vec<String>,
     /// 最近一次轻量提醒，用于在 dashboard 显示
     pub last_reminder: Option<(ReminderKind, chrono::DateTime<chrono::Local>)>,
-    pub error_msg: Option<String>,
+    pub notice: Option<Notice>,
 }
 
 impl App {
@@ -83,6 +93,7 @@ impl App {
         if let Some(sid) = db::last_open_session(&db)? {
             let _ = db::end_session(&db, sid, 0);
         }
+        let settings = ui::settings::SettingsState::new(&cfg);
         let config = Arc::new(Mutex::new(cfg));
         let sched = scheduler::spawn(Arc::clone(&config))?;
         let today = db::get_today(&db)?;
@@ -110,10 +121,11 @@ impl App {
             breathing_count,
             breathing_secs,
             breathing_streak,
+            settings,
             pending_break: None,
             last_break_titles: Vec::new(),
             last_reminder: None,
-            error_msg: None,
+            notice: None,
         })
     }
 
@@ -254,6 +266,22 @@ impl App {
         let _ = self.sched.cmd_tx.send(cmd);
     }
 
+    pub fn show_success(&mut self, message: impl Into<String>) {
+        self.notice = Some(Notice {
+            kind: NoticeKind::Success,
+            message: message.into(),
+            created_at: Instant::now(),
+        });
+    }
+
+    pub fn show_error(&mut self, message: impl Into<String>) {
+        self.notice = Some(Notice {
+            kind: NoticeKind::Error,
+            message: message.into(),
+            created_at: Instant::now(),
+        });
+    }
+
     /// 切换 Start/Pause/Resume/Stop 按钮组逻辑
     pub fn start_session_if_needed(&mut self) {
         if self.session_id.is_none() {
@@ -312,71 +340,119 @@ impl eframe::App for App {
             }
         }
 
-        // 顶栏
-        egui::TopBottomPanel::top("topbar").show(ctx, |ui| {
-            ui.add_space(4.0);
-            ui.horizontal(|ui| {
-                ui.heading("🌱 Lifetime · 健康助手");
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let today_label = format!(
-                        "今日已工作 {}",
-                        crate::stats::fmt_hms(self.today.work_seconds)
+        egui::TopBottomPanel::top("topbar")
+            .frame(
+                egui::Frame::none()
+                    .fill(ui::theme::PANEL)
+                    .stroke(egui::Stroke::new(1.0, ui::theme::STROKE))
+                    .inner_margin(egui::Margin::symmetric(16.0, 9.0)),
+            )
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new(self.view.label())
+                            .size(14.0)
+                            .strong()
+                            .color(ui::theme::TEXT),
                     );
-                    ui.label(RichText::new(today_label).color(Color32::LIGHT_GREEN));
-                    ui.separator();
-                    self.controls(ui);
+                    ui.label(
+                        RichText::new("日常有节 · 身心有度")
+                            .size(12.0)
+                            .color(ui::theme::TEXT_WEAK),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        self.compact_controls(ui);
+                    });
                 });
             });
-            ui.add_space(4.0);
-        });
 
-        // 侧栏
-        egui::SidePanel::left("sidebar").resizable(false).default_width(140.0).show(ctx, |ui| {
-            ui.add_space(8.0);
-            for v in View::all() {
-                let selected = self.view == *v;
-                let txt = RichText::new(format!("{}  {}", v.icon(), v.label())).size(14.0);
-                let btn = ui.selectable_label(selected, txt);
-                if btn.clicked() {
-                    self.view = *v;
-                    if matches!(v, View::Stats) {
-                        self.refresh_stats();
+        egui::SidePanel::left("sidebar")
+            .resizable(false)
+            .exact_width(168.0)
+            .frame(
+                egui::Frame::none()
+                    .fill(ui::theme::PANEL)
+                    .inner_margin(egui::Margin::same(12.0)),
+            )
+            .show(ctx, |ui| {
+                ui.add_space(4.0);
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("♥").size(24.0).color(ui::theme::ACCENT));
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("LIFETIME").size(15.0).strong());
+                        ui.label(
+                            RichText::new("健康助手")
+                                .size(11.5)
+                                .color(ui::theme::TEXT_WEAK),
+                        );
+                    });
+                });
+                ui.add_space(18.0);
+
+                for view in View::all() {
+                    let dirty = *view == View::Settings && self.settings.dirty;
+                    let response = ui::widgets::nav_item(
+                        ui,
+                        view.icon(),
+                        view.label(),
+                        self.view == *view,
+                        dirty,
+                    );
+                    if response.clicked() {
+                        self.view = *view;
+                        if *view == View::Stats {
+                            self.refresh_stats();
+                        }
                     }
+                    ui.add_space(3.0);
                 }
-            }
-            ui.add_space(12.0);
-            ui.separator();
-            ui.add_space(8.0);
-            let phase = match self.run_state {
-                RunState::Idle => "🟦 未开始",
-                RunState::Running => "🟢 工作中",
-                RunState::Paused => "🟡 已暂停",
-            };
-            ui.label(RichText::new(phase).size(13.0));
-        });
+
+                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(format!(
+                            "今日 {}",
+                            crate::stats::fmt_hms(self.today.work_seconds)
+                        ))
+                        .size(12.0)
+                        .color(ui::theme::TEXT_WEAK),
+                    );
+                    let (phase, color) = match self.run_state {
+                        RunState::Idle => ("未开始", ui::theme::TEXT_WEAK),
+                        RunState::Running => ("专注进行中", ui::theme::ACCENT),
+                        RunState::Paused => ("已暂停", ui::theme::WARN),
+                    };
+                    ui::widgets::status_badge(ui, phase, color);
+                    ui.add_space(8.0);
+                    ui.separator();
+                });
+            });
 
         // 中央内容
-        egui::CentralPanel::default().show(ctx, |ui| match self.view {
-            View::Dashboard => ui::dashboard::render(self, ui),
-            View::Breathing => ui::breathing::render(self, ui),
-            View::Library => ui::library::render(self, ui),
-            View::Practice => ui::practice::render(self, ui),
-            View::Stats => ui::stats_view::render(self, ui),
-            View::Settings => ui::settings::render(self, ui),
-            View::About => render_about(ui),
-        });
+        egui::CentralPanel::default()
+            .frame(
+                egui::Frame::none()
+                    .fill(ui::theme::BG)
+                    .inner_margin(egui::Margin::same(20.0)),
+            )
+            .show(ctx, |ui| match self.view {
+                View::Dashboard => ui::dashboard::render(self, ui),
+                View::Breathing => ui::breathing::render(self, ui),
+                View::Library => ui::library::render(self, ui),
+                View::Practice => ui::practice::render(self, ui),
+                View::Stats => ui::stats_view::render(self, ui),
+                View::Settings => ui::settings::render(self, ui),
+            });
 
-        // 错误提示
-        if let Some(err) = self.error_msg.clone() {
-            egui::Window::new("提示")
-                .anchor(egui::Align2::CENTER_TOP, [0.0, 40.0])
-                .collapsible(false)
-                .show(ctx, |ui| {
-                    ui.label(err);
-                    if ui.button("知道了").clicked() {
-                        self.error_msg = None;
-                    }
-                });
+        if let Some(notice) = &self.notice {
+            let expired = notice.kind == NoticeKind::Success
+                && notice.created_at.elapsed() >= Duration::from_secs(3);
+            let dismiss = ui::widgets::toast(ctx, notice.kind, &notice.message);
+            if expired || dismiss {
+                self.notice = None;
+            } else if notice.kind == NoticeKind::Success {
+                ctx.request_repaint_after(Duration::from_millis(250));
+            }
         }
 
         // 模态休息窗（多视口）
@@ -394,42 +470,43 @@ impl eframe::App for App {
 }
 
 impl App {
-    fn controls(&mut self, ui: &mut egui::Ui) {
+    fn compact_controls(&mut self, ui: &mut egui::Ui) {
         match self.run_state {
             RunState::Idle => {
-                if ui.button(RichText::new("▶ 开始").strong()).clicked() {
-                    self.start_session_if_needed();
-                    self.send(Command::Start);
-                }
+                ui.label(
+                    RichText::new("会话尚未开始")
+                        .size(12.5)
+                        .color(ui::theme::TEXT_WEAK),
+                );
             }
             RunState::Running => {
-                if ui.button("⏸ 暂停").clicked() {
+                if ui.button("■").on_hover_text("结束当前会话").clicked() {
+                    self.send(Command::Stop);
+                }
+                if ui.button("Ⅱ").on_hover_text("暂停当前会话").clicked() {
                     self.send(Command::Pause);
                 }
-                if ui.button("⏹ 结束").clicked() {
-                    self.send(Command::Stop);
-                }
+                ui.label(
+                    RichText::new(crate::stats::fmt_hms(self.running_secs as i64))
+                        .monospace()
+                        .color(ui::theme::ACCENT),
+                );
+                ui::widgets::status_badge(ui, "专注中", ui::theme::ACCENT);
             }
             RunState::Paused => {
-                if ui.button("▶ 继续").clicked() {
-                    self.send(Command::Resume);
-                }
-                if ui.button("⏹ 结束").clicked() {
+                if ui.button("■").on_hover_text("结束当前会话").clicked() {
                     self.send(Command::Stop);
                 }
+                if ui.button("▶").on_hover_text("继续当前会话").clicked() {
+                    self.send(Command::Resume);
+                }
+                ui.label(
+                    RichText::new(crate::stats::fmt_hms(self.running_secs as i64))
+                        .monospace()
+                        .color(ui::theme::WARN),
+                );
+                ui::widgets::status_badge(ui, "已暂停", ui::theme::WARN);
             }
         }
     }
-}
-
-fn render_about(ui: &mut egui::Ui) {
-    ui.heading("关于 Lifetime");
-    ui.add_space(8.0);
-    ui.label("一款面向程序员/久坐人群的科学健康提醒工具。");
-    ui.add_space(8.0);
-    ui.label("• 20-20-20 护眼、起身、喝水、颈椎、番茄钟 / 大休息");
-    ui.label("• 健康知识库（9 大类，含具体动作步骤与好处）");
-    ui.label("• SQLite 长期统计，跨平台（Linux/macOS/Windows）");
-    ui.add_space(12.0);
-    ui.label("数据完全本地保存，不联网。");
 }

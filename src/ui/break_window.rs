@@ -4,10 +4,11 @@
 //
 // 注意：跳过按钮带 15 秒（可配）冷却防误触
 
-use eframe::egui::{self, Color32, RichText};
+use eframe::egui::{self, RichText};
 
 use crate::app::App;
 use crate::scheduler::Command;
+use crate::ui::theme;
 
 pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
     let Some(b) = app.pending_break.as_ref() else {
@@ -59,7 +60,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
         egui::CentralPanel::default()
             .frame(
                 egui::Frame::none()
-                    .fill(Color32::from_rgb(20, 24, 40))
+                    .fill(theme::BG)
                     .inner_margin(24.0),
             )
             .show(ctx, |ui| {
@@ -67,10 +68,15 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
 
                 ui.vertical_centered(|ui| {
                     ui.label(
-                        RichText::new(format!("{} · 该休息了", kind.label()))
+                        RichText::new("停一停，舒展片刻")
                             .size(22.0)
                             .strong()
-                            .color(Color32::WHITE),
+                            .color(theme::TEXT),
+                    );
+                    ui.label(
+                        RichText::new(kind.label())
+                            .size(12.5)
+                            .color(theme::ACCENT),
                     );
                     ui.add_space(4.0);
                     // 跟练进度：第 x/n 节 · 部位 · 整体剩余
@@ -86,7 +92,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                             overall_s,
                         ))
                         .size(14.0)
-                        .color(Color32::from_rgb(160, 200, 230)),
+                        .color(theme::TEXT_WEAK),
                     );
                     ui.add_space(6.0);
                     // 大字倒计时（当前小节）
@@ -97,13 +103,14 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                             .size(54.0)
                             .monospace()
                             .strong()
-                            .color(Color32::from_rgb(180, 230, 255)),
+                            .color(theme::ACCENT),
                     );
                     // 整体进度条
                     let ratio = (total - remaining) as f32 / total as f32;
                     ui.add(
                         egui::ProgressBar::new(ratio.clamp(0.0, 1.0))
                             .desired_width(content_width.min(460.0))
+                            .fill(theme::ACCENT)
                             .text(""),
                     );
 
@@ -112,9 +119,9 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                     let card_height = (ui.available_height() - 104.0).max(220.0);
 
                     egui::Frame::none()
-                        .fill(Color32::from_rgb(34, 40, 60))
-                        .stroke(egui::Stroke::new(1.0, Color32::from_rgb(54, 64, 88)))
-                        .rounding(10.0)
+                        .fill(theme::CARD)
+                        .stroke(egui::Stroke::new(1.0, theme::STROKE))
+                        .rounding(8.0)
                         .inner_margin(18.0)
                         .show(ui, |ui| {
                             ui.set_width(content_width);
@@ -132,7 +139,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                                                 RichText::new(&title)
                                                     .size(18.0)
                                                     .strong()
-                                                    .color(Color32::from_rgb(255, 230, 180)),
+                                                    .color(theme::WARN),
                                             )
                                             .wrap(),
                                         );
@@ -141,7 +148,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                                             ui.add(
                                                 egui::Label::new(
                                                     RichText::new(kind.brief())
-                                                        .color(Color32::LIGHT_GRAY),
+                                                        .color(theme::TEXT_WEAK),
                                                 )
                                                 .wrap(),
                                             );
@@ -153,7 +160,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                                                         RichText::new(format!("{}.", i + 1))
                                                             .monospace()
                                                             .strong()
-                                                            .color(Color32::from_rgb(180, 230, 255)),
+                                                            .color(theme::ACCENT),
                                                     );
                                                     ui.add_space(4.0);
                                                     let text_width = ui.available_width().max(120.0);
@@ -165,9 +172,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                                                             ui.add(
                                                                 egui::Label::new(
                                                                     RichText::new(step)
-                                                                        .color(Color32::from_rgb(
-                                                                            220, 230, 240,
-                                                                        ))
+                                                                        .color(theme::TEXT)
                                                                         .size(15.0),
                                                                 )
                                                                 .wrap(),
@@ -186,7 +191,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                                                 egui::Label::new(
                                                     RichText::new(format!("💡 {benefit}"))
                                                         .italics()
-                                                        .color(Color32::from_rgb(150, 220, 150)),
+                                                        .color(theme::ACCENT),
                                                 )
                                                 .wrap(),
                                             );
@@ -201,7 +206,11 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                         Some(t) => format!("下一节：{t}"),
                         None => "最后一节，做完就完成啦".to_string(),
                     };
-                    ui.label(RichText::new(next_hint).size(13.0).color(Color32::from_rgb(150, 170, 190)));
+                    ui.label(
+                        RichText::new(next_hint)
+                            .size(13.0)
+                            .color(theme::TEXT_WEAK),
+                    );
 
                     ui.add_space(8.0);
 
@@ -214,7 +223,7 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
                         let skip_label = if skip_left > 0 {
                             format!("⏭ 跳过 (再 {} s)", skip_left)
                         } else {
-                            "⏭ 跳过".to_string()
+                            "跳过".to_string()
                         };
                         let skip_btn = ui.add_enabled(
                             skip_left == 0,
@@ -230,7 +239,8 @@ pub fn render_break_viewport(app: &mut App, ctx: &egui::Context) {
 
                         if ui
                             .add(
-                                egui::Button::new(RichText::new("✅ 完成").size(14.0).strong())
+                                egui::Button::new(RichText::new("✓  完成").size(14.0).strong())
+                                    .fill(theme::ACCENT.linear_multiply(0.36))
                                     .min_size(egui::vec2(button_width, 36.0)),
                             )
                             .clicked()

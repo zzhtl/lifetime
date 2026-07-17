@@ -1,49 +1,33 @@
-// 养生修炼面板
-// 以内经八纲展示长期健康体系：纲领导航 + 修炼卡片 + 来源依据。
+// 养生修炼：分类、境界反馈、摘要卡片与每日打卡
 
 use eframe::egui::{self, Color32, RichText};
 
 use crate::app::App;
 use crate::practices::{realm_progress, Practice, PracticeCategory, RealmProgress};
-use crate::ui::theme;
+use crate::ui::{theme, widgets};
 use crate::ui::widgets::badge;
 
-const NAV_W: f32 = 208.0;
+const NAV_W: f32 = 174.0;
 
-fn rgb(c: (u8, u8, u8)) -> Color32 {
-    Color32::from_rgb(c.0, c.1, c.2)
+fn rgb(color: (u8, u8, u8)) -> Color32 {
+    Color32::from_rgb(color.0, color.1, color.2)
 }
 
 pub fn render(app: &mut App, ui: &mut egui::Ui) {
-    let key = egui::Id::new("practice_current_category");
-    let mut cur: PracticeCategory = ui
+    let category_key = egui::Id::new("practice_current_category");
+    let mut current: PracticeCategory = ui
         .ctx()
-        .memory(|m| m.data.get_temp(key).unwrap_or(PracticeCategory::Diet));
-    // 呼吸法门已独立为顶层页；若记忆里残留该分类则回退，避免右栏内容无对应导航
-    if cur == PracticeCategory::Breathing {
-        cur = PracticeCategory::Diet;
+        .memory(|memory| memory.data.get_temp(category_key).unwrap_or(PracticeCategory::Diet));
+    if current == PracticeCategory::Breathing {
+        current = PracticeCategory::Diet;
     }
 
-    // 修为境界横幅数据：先 Copy/查出来，避免与下方 practices 借用打架
     let realm = realm_progress(app.cultivation.points);
     let streak = crate::db::practice_streak(&app.db).unwrap_or(0);
-    // 打卡点击收集：闭包内 practices 正借用 app，不能同时可变借用，退出后再统一写库
-    let mut pending: Option<(String, String)> = None;
+    let mut pending_checkin: Option<(String, String)> = None;
 
-    ui.add_space(2.0);
-    ui.heading("☯ 养生修炼");
-    ui.add_space(4.0);
-    ui.add(
-        egui::Label::new(
-            RichText::new("以内经为纲：法阴阳、节饮食、常起居、调形神。")
-                .size(13.0)
-                .color(theme::TEXT_WEAK),
-        )
-        .wrap(),
-    );
-    ui.add_space(6.0);
-    ui.separator();
-    ui.add_space(8.0);
+    widgets::page_header(ui, "养生修炼", "以内经为纲，节饮食、常起居、调形神；每日一修，重在可持续。");
+    ui.add_space(14.0);
 
     ui.horizontal_top(|ui| {
         ui.allocate_ui_with_layout(
@@ -51,13 +35,12 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
             egui::Layout::top_down(egui::Align::Min),
             |ui| {
                 ui.set_min_width(NAV_W);
-                for c in PracticeCategory::all() {
-                    // 呼吸法门已独立为顶层页，不在修炼页导航中重复出现
-                    if *c == PracticeCategory::Breathing {
+                for category in PracticeCategory::all() {
+                    if *category == PracticeCategory::Breathing {
                         continue;
                     }
-                    if category_button(ui, *c, cur == *c) {
-                        cur = *c;
+                    if category_button(ui, *category, current == *category) {
+                        current = *category;
                     }
                     ui.add_space(3.0);
                 }
@@ -65,259 +48,284 @@ pub fn render(app: &mut App, ui: &mut egui::Ui) {
         );
 
         ui.add_space(12.0);
-
         ui.allocate_ui_with_layout(
             ui.available_size(),
             egui::Layout::top_down(egui::Align::Min),
             |ui| {
-                let accent = rgb(cur.accent());
+                let accent = rgb(current.accent());
+                let practices = app.practices.by_category(current);
                 let logged: std::collections::HashSet<String> =
                     app.cultivation.today_logged.iter().cloned().collect();
-                let practices = app.practices.by_category(cur);
 
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(cur.icon()).size(18.0).color(accent));
-                    ui.add_space(2.0);
-                    ui.label(RichText::new(cur.label()).size(17.0).strong().color(accent));
-                    ui.label(
-                        RichText::new(format!("· {} 法", practices.len()))
-                            .size(13.0)
-                            .color(theme::TEXT_WEAK),
-                    );
-                });
+                widgets::section_header(
+                    ui,
+                    current.label(),
+                    Some(&format!("{} 项功法", practices.len())),
+                );
                 ui.add_space(8.0);
-
-                // 修为境界横幅：打卡成长的核心反馈
                 realm_banner(ui, &realm, streak, accent);
-                ui.add_space(6.0);
+                ui.add_space(10.0);
+
+                let open_key = egui::Id::new(("practice_open_item", current.key()));
+                let mut open_title: Option<String> = ui
+                    .ctx()
+                    .memory(|memory| memory.data.get_temp(open_key).unwrap_or_default());
 
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
                         if practices.is_empty() {
-                            ui.label(
-                                RichText::new("该纲暂无修炼内容")
-                                    .italics()
-                                    .color(theme::TEXT_WEAK),
-                            );
+                            ui.label(RichText::new("该分类暂无内容").color(theme::TEXT_WEAK));
                         }
                         for practice in practices {
-                            practice_card(ui, practice, accent);
-                            // 打卡按钮：今日已修则禁用
-                            let done = logged.contains(&practice.title);
-                            if checkin_button(ui, done, accent) {
-                                pending = Some((
-                                    practice.category.key().to_string(),
-                                    practice.title.clone(),
-                                ));
+                            let expanded = open_title.as_deref() == Some(practice.title.as_str());
+                            if practice_card(ui, practice, accent, expanded) {
+                                open_title = if expanded {
+                                    None
+                                } else {
+                                    Some(practice.title.clone())
+                                };
+                                ui.ctx().request_repaint();
                             }
+                            ui.add_space(5.0);
+                            ui.horizontal(|ui| {
+                                let done = logged.contains(&practice.title);
+                                if checkin_button(ui, done, accent) {
+                                    pending_checkin = Some((
+                                        practice.category.key().to_string(),
+                                        practice.title.clone(),
+                                    ));
+                                }
+                            });
                             ui.add_space(12.0);
                         }
                         ui.add_space(4.0);
                     });
+
+                ui.ctx()
+                    .memory_mut(|memory| memory.data.insert_temp(open_key, open_title));
             },
         );
     });
 
-    // practices 借用已随闭包结束，安全地写入打卡
-    if let Some((category, title)) = pending {
+    if let Some((category, title)) = pending_checkin {
         app.log_practice(&category, title);
     }
-
-    ui.ctx().memory_mut(|m| m.data.insert_temp(key, cur));
+    ui.ctx()
+        .memory_mut(|memory| memory.data.insert_temp(category_key, current));
 }
 
-fn category_button(ui: &mut egui::Ui, c: PracticeCategory, selected: bool) -> bool {
-    let accent = rgb(c.accent());
+fn category_button(ui: &mut egui::Ui, category: PracticeCategory, selected: bool) -> bool {
+    let accent = rgb(category.accent());
+    let (rect, response) = ui.allocate_exact_size(
+        egui::vec2(ui.available_width(), 38.0),
+        egui::Sense::click(),
+    );
     let fill = if selected {
-        accent.linear_multiply(0.20)
+        accent.linear_multiply(0.18)
+    } else if response.hovered() {
+        theme::CARD_HOVER
     } else {
         Color32::TRANSPARENT
     };
-    let resp = egui::Frame::none()
-        .fill(fill)
-        .rounding(egui::Rounding::same(8.0))
-        .inner_margin(egui::Margin::symmetric(12.0, 9.0))
-        .show(ui, |ui| {
-            ui.set_min_width(NAV_W - 16.0);
-            ui.horizontal(|ui| {
-                ui.label(
-                    RichText::new(c.icon())
-                        .size(16.0)
-                        .color(if selected { accent } else { theme::TEXT_WEAK }),
-                );
-                ui.add_space(4.0);
-                let txt = RichText::new(c.label()).size(14.5);
-                ui.label(if selected {
-                    txt.strong().color(accent)
-                } else {
-                    txt.color(theme::TEXT)
-                });
-            });
-        })
-        .response;
-    let resp = resp.interact(egui::Sense::click());
-    if resp.hovered() {
+    ui.painter().rect_filled(rect, 7.0, fill);
+    ui.painter().text(
+        rect.left_center() + egui::vec2(10.0, 0.0),
+        egui::Align2::LEFT_CENTER,
+        format!("{}  {}", category.icon(), category.label()),
+        egui::FontId::proportional(13.5),
+        if selected { accent } else { theme::TEXT },
+    );
+    if response.hovered() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
-    resp.clicked()
+    response.clicked()
 }
 
 fn realm_banner(ui: &mut egui::Ui, realm: &RealmProgress, streak: i64, accent: Color32) {
     egui::Frame::none()
-        .fill(theme::CARD)
-        .stroke(egui::Stroke::new(1.0, accent.linear_multiply(0.6)))
-        .rounding(egui::Rounding::same(8.0))
-        .inner_margin(egui::Margin::symmetric(12.0, 6.0))
+        .fill(theme::CARD_ALT)
+        .stroke(egui::Stroke::new(1.0, accent.linear_multiply(0.45)))
+        .rounding(8.0)
+        .inner_margin(egui::Margin::symmetric(12.0, 8.0))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.label(
-                    RichText::new(format!("⛰ {}", realm.name))
-                        .size(15.0)
-                        .strong()
-                        .color(accent),
-                );
-                ui.add_space(8.0);
+                ui.label(RichText::new(realm.name).size(15.0).strong().color(accent));
                 ui.label(
                     RichText::new(format!("修为 {}", realm.points))
                         .size(12.0)
                         .color(theme::TEXT_WEAK),
                 );
                 if streak > 0 {
-                    ui.add_space(8.0);
                     ui.label(
-                        RichText::new(format!("🔥 连续 {} 天", streak))
+                        RichText::new(format!("连续 {} 天", streak))
                             .size(12.0)
                             .color(theme::WARN),
                     );
                 }
             });
-            ui.add_space(4.0);
+            ui.add_space(5.0);
             let hint = match realm.next_name {
-                Some(next) => format!("距「{}」还需 {} 次", next, realm.need),
+                Some(next) => format!("距「{next}」还需 {} 次", realm.need),
                 None => "已臻化境".to_string(),
             };
-            ui.add(egui::ProgressBar::new(realm.ratio).text(RichText::new(hint).size(11.0)));
+            ui.add(
+                egui::ProgressBar::new(realm.ratio)
+                    .fill(accent)
+                    .text(RichText::new(hint).size(11.0)),
+            );
         });
 }
 
-pub(crate) fn checkin_button(ui: &mut egui::Ui, done: bool, accent: Color32) -> bool {
-    if done {
-        ui.add_enabled(
-            false,
-            egui::Button::new(RichText::new("✅ 今日已修").size(13.0)),
-        );
-        false
-    } else {
-        ui.add(egui::Button::new(
-            RichText::new("✓ 今日修炼打卡")
-                .size(13.0)
-                .strong()
-                .color(accent),
+/// 返回整张卡片是否被点击。
+pub(crate) fn practice_card(
+    ui: &mut egui::Ui,
+    practice: &Practice,
+    accent: Color32,
+    expanded: bool,
+) -> bool {
+    let response = egui::Frame::none()
+        .fill(if expanded { theme::CARD_ALT } else { theme::CARD })
+        .stroke(egui::Stroke::new(
+            1.0,
+            if expanded {
+                accent.linear_multiply(0.55)
+            } else {
+                theme::STROKE
+            },
         ))
-        .clicked()
-    }
-}
-
-pub(crate) fn practice_card(ui: &mut egui::Ui, practice: &Practice, accent: Color32) {
-    egui::Frame::none()
-        .fill(theme::CARD)
-        .stroke(egui::Stroke::new(1.0, theme::STROKE))
-        .rounding(egui::Rounding::same(12.0))
-        .inner_margin(egui::Margin::same(16.0))
+        .rounding(8.0)
+        .inner_margin(egui::Margin::same(14.0))
         .show(ui, |ui| {
-            ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
-                ui.add(
-                    egui::Label::new(
-                        RichText::new(&practice.title)
-                            .size(17.0)
-                            .strong()
-                            .color(accent),
-                    )
-                    .wrap(),
-                );
-                ui.add_space(7.0);
-
-                ui.horizontal_wrapped(|ui| {
-                    badge(ui, practice.stage.label(), accent);
-                    if practice.duration_mins > 0 {
-                        badge(ui, format!("⏱ {} 分钟", practice.duration_mins), theme::TEXT_WEAK);
-                    }
-                    if !practice.frequency.is_empty() {
-                        badge(ui, format!("🔁 {}", practice.frequency), theme::TEXT_WEAK);
-                    }
-                    for scene in &practice.scenes {
-                        badge(ui, scene.label(), theme::PURPLE);
-                    }
+            ui.set_width(ui.available_width());
+            ui.horizontal_top(|ui| {
+                ui.vertical(|ui| {
+                    ui.set_max_width((ui.available_width() - 40.0).max(180.0));
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(&practice.title)
+                                .size(16.0)
+                                .strong()
+                                .color(accent),
+                        )
+                        .wrap(),
+                    );
+                    ui.add_space(6.0);
+                    ui.horizontal_wrapped(|ui| {
+                        badge(ui, practice.stage.label(), accent);
+                        if practice.duration_mins > 0 {
+                            badge(ui, format!("{} 分钟", practice.duration_mins), theme::TEXT_WEAK);
+                        }
+                        if !practice.frequency.is_empty() {
+                            badge(ui, &practice.frequency, theme::TEXT_WEAK);
+                        }
+                        for scene in &practice.scenes {
+                            badge(ui, scene.label(), theme::PURPLE);
+                        }
+                    });
                 });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.label(
+                        RichText::new(if expanded { "⌃" } else { "⌄" })
+                            .color(theme::TEXT_WEAK),
+                    );
+                });
+            });
 
-                ui.add_space(10.0);
-                ui.add(
-                    egui::Label::new(
-                        RichText::new(&practice.summary)
-                            .size(14.5)
-                            .color(theme::TEXT)
-                            .italics(),
-                    )
-                    .wrap(),
-                );
-                ui.add_space(10.0);
+            ui.add_space(8.0);
+            ui.add(
+                egui::Label::new(
+                    RichText::new(&practice.summary)
+                        .size(13.5)
+                        .color(theme::TEXT),
+                )
+                .wrap(),
+            );
+            ui.add_space(5.0);
+            ui.add(
+                egui::Label::new(
+                    RichText::new(&practice.benefit)
+                        .size(13.0)
+                        .color(theme::ACCENT),
+                )
+                .wrap(),
+            );
 
-                for (i, step) in practice.steps.iter().enumerate() {
+            if expanded {
+                ui.add_space(12.0);
+                ui.separator();
+                ui.add_space(10.0);
+                widgets::section_header(ui, "修炼步骤", None);
+                ui.add_space(6.0);
+                for (index, step) in practice.steps.iter().enumerate() {
                     ui.horizontal_top(|ui| {
                         ui.label(
-                            RichText::new(format!("{}", i + 1))
+                            RichText::new(format!("{:02}", index + 1))
                                 .monospace()
                                 .strong()
                                 .color(accent),
                         );
                         ui.add_space(6.0);
                         ui.add(
-                            egui::Label::new(RichText::new(step).size(14.5).color(theme::TEXT))
-                                .wrap(),
+                            egui::Label::new(
+                                RichText::new(step).size(13.5).color(theme::TEXT),
+                            )
+                            .wrap(),
                         );
                     });
                     ui.add_space(4.0);
                 }
-
-                ui.add_space(8.0);
-                detail_line(ui, "得益", &practice.benefit, theme::ACCENT);
                 detail_line(ui, "今解", &practice.science, theme::INFO);
                 detail_line(ui, "戒偏", &practice.caution, theme::WARN);
-                ui.add_space(6.0);
-                sources_block(ui, practice);
-            });
-        });
+
+                if !practice.sources.is_empty() {
+                    ui.add_space(10.0);
+                    ui.label(
+                        RichText::new("原典与依据")
+                            .size(13.5)
+                            .strong()
+                            .color(theme::TEXT_WEAK),
+                    );
+                    for source in &practice.sources {
+                        ui.horizontal_wrapped(|ui| {
+                            badge(ui, source.level.label(), theme::TEXT_WEAK);
+                            ui.hyperlink_to(&source.name, &source.url);
+                        });
+                    }
+                }
+            }
+        })
+        .response
+        .interact(egui::Sense::click());
+    if response.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    response.clicked()
+}
+
+pub(crate) fn checkin_button(ui: &mut egui::Ui, done: bool, accent: Color32) -> bool {
+    if done {
+        ui.add_enabled(false, egui::Button::new("✓ 今日已修"));
+        false
+    } else {
+        ui.add(
+            egui::Button::new(RichText::new("✓ 今日修炼").strong().color(accent))
+                .min_size(egui::vec2(108.0, 30.0)),
+        )
+        .clicked()
+    }
 }
 
 fn detail_line(ui: &mut egui::Ui, title: &str, body: &str, color: Color32) {
-    ui.horizontal_top(|ui| {
-        ui.label(RichText::new(title).size(13.5).strong().color(color));
-        ui.add_space(4.0);
-        ui.add(egui::Label::new(RichText::new(body).size(13.5).color(theme::TEXT_WEAK)).wrap());
-    });
-}
-
-fn sources_block(ui: &mut egui::Ui, practice: &Practice) {
-    let id = ui.make_persistent_id(("practice_sources", practice.title.as_str()));
-    egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
-        .show_header(ui, |ui| {
-            ui.label(
-                RichText::new("展开来源（原典 · 依据）")
-                    .size(13.0)
-                    .color(theme::TEXT_WEAK),
-            );
-        })
-        .body(|ui| {
-            ui.add_space(4.0);
-            for source in &practice.sources {
-                ui.horizontal_wrapped(|ui| {
-                    badge(ui, source.level.label(), theme::TEXT_WEAK);
-                    ui.hyperlink_to(&source.name, &source.url);
-                });
-            }
-        });
+    if body.is_empty() {
+        return;
+    }
+    ui.add_space(10.0);
+    ui.label(RichText::new(title).size(13.5).strong().color(color));
+    ui.add(
+        egui::Label::new(RichText::new(body).size(13.5).color(theme::TEXT_WEAK)).wrap(),
+    );
 }
 
 #[cfg(test)]
@@ -325,9 +333,10 @@ mod tests {
     use super::*;
     use crate::practices::PracticeLibrary;
 
-    fn render_category_height(cat: PracticeCategory) -> (usize, f32) {
-        let lib = PracticeLibrary::load().expect("加载 practices.toml");
-        let n = lib.by_category(cat).len();
+    fn render_category_height(category: PracticeCategory, expanded: bool) -> (usize, f32) {
+        let library = PracticeLibrary::load().expect("加载 practices.toml");
+        let practices = library.by_category(category);
+        let count = practices.len();
         let ctx = egui::Context::default();
         let input = egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
@@ -336,56 +345,99 @@ mod tests {
             )),
             ..Default::default()
         };
-        let mut content_h = 0.0_f32;
+        let mut content_height = 0.0;
         let _ = ctx.run(input, |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                let accent = Color32::from_rgb(150, 190, 120);
                 ui.allocate_ui_with_layout(
                     egui::vec2(620.0, ui.available_height()),
                     egui::Layout::top_down(egui::Align::Min),
                     |ui| {
-                        for practice in lib.by_category(cat) {
-                            practice_card(ui, practice, accent);
-                            ui.add_space(12.0);
+                        for (index, practice) in practices.iter().enumerate() {
+                            practice_card(ui, practice, theme::ACCENT, expanded && index == 0);
+                            ui.add_space(10.0);
                         }
-                        content_h = ui.min_rect().height();
+                        content_height = ui.min_rect().height();
                     },
                 );
             });
         });
-        (n, content_h)
+        (count, content_height)
     }
 
     #[test]
-    fn all_practice_categories_render() {
-        for c in PracticeCategory::all() {
-            let (n, h) = render_category_height(*c);
-            assert!(n > 0, "修炼分类 {:?} 没有内容", c);
-            assert!(h > 60.0, "修炼分类 {:?} 渲染塌陷: {h}px", c);
+    fn all_practice_categories_render_as_summaries() {
+        for category in PracticeCategory::all() {
+            let (count, height) = render_category_height(*category, false);
+            assert!(count > 0, "修炼分类 {category:?} 没有内容");
+            assert!(height > count as f32 * 45.0, "摘要卡片疑似渲染塌陷");
         }
     }
 
     #[test]
-    fn realm_banner_and_checkin_render_without_panic() {
+    fn expanded_practice_and_realm_states_render() {
+        let (_, summary_height) = render_category_height(PracticeCategory::Diet, false);
+        let (_, expanded_height) = render_category_height(PracticeCategory::Diet, true);
+        assert!(expanded_height > summary_height);
+
         let ctx = egui::Context::default();
-        let input = egui::RawInput {
-            screen_rect: Some(egui::Rect::from_min_size(
-                egui::pos2(0.0, 0.0),
-                egui::vec2(900.0, 700.0),
-            )),
-            ..Default::default()
-        };
-        let _ = ctx.run(input, |ctx| {
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                let accent = Color32::from_rgb(200, 180, 100);
-                // 有下一境界 + 连续天数 > 0
-                realm_banner(ui, &crate::practices::realm_progress(10), 3, accent);
-                // 达顶境界（next_name = None 分支）+ 连续天数 = 0
-                realm_banner(ui, &crate::practices::realm_progress(1000), 0, accent);
-                // 打卡按钮两态
-                let _ = checkin_button(ui, false, accent);
-                let _ = checkin_button(ui, true, accent);
+                realm_banner(ui, &realm_progress(10), 3, theme::ACCENT);
+                realm_banner(ui, &realm_progress(1000), 0, theme::WARN);
+                let _ = checkin_button(ui, false, theme::ACCENT);
+                let _ = checkin_button(ui, true, theme::ACCENT);
             });
         });
+    }
+
+    #[test]
+    fn clicking_practice_card_body_toggles_details() {
+        let library = PracticeLibrary::load().expect("加载 practices.toml");
+        let practice = library
+            .by_category(PracticeCategory::Diet)
+            .into_iter()
+            .next()
+            .expect("饮食分类应有修炼内容");
+        let ctx = egui::Context::default();
+        // 标题文字区域，不是箭头或卡片空白处。
+        let position = egui::pos2(120.0, 30.0);
+
+        let render = |events| {
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(640.0, 480.0),
+                )),
+                events,
+                ..Default::default()
+            };
+            let mut clicked = false;
+            let _ = ctx.run(input, |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    clicked = practice_card(ui, practice, theme::ACCENT, false);
+                });
+            });
+            clicked
+        };
+
+        assert!(!render(Vec::new()));
+        assert!(!render(vec![
+            egui::Event::PointerMoved(position),
+            egui::Event::PointerButton {
+                pos: position,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ]));
+        assert!(render(vec![
+            egui::Event::PointerMoved(position),
+            egui::Event::PointerButton {
+                pos: position,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ]));
     }
 }
