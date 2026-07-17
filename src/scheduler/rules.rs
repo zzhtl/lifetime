@@ -79,6 +79,7 @@ impl Engine {
                     self.last_fire.clear();
                     self.phase = Phase::Focus;
                     self.big_break_secs = 0;
+                    self.last_heartbeat = 0;
                     self.fired_today.clear();
                     self.off_work_fired_date = None;
                     self.last_emit_secs = None;
@@ -432,5 +433,24 @@ mod tests {
             e.tick(Instant::now(), &cfg);
         }
         assert_eq!(e.running_secs(), snapshot);
+    }
+
+    #[test]
+    fn heartbeat_restarts_from_zero_after_session_restart() {
+        let mut e = Engine::new();
+        let cfg = fast_cfg();
+
+        e.apply(Command::Start, &cfg);
+        for _ in 0..4 {
+            assert!(e.tick(Instant::now(), &cfg).heartbeat.is_none());
+        }
+        assert_eq!(e.tick(Instant::now(), &cfg).heartbeat, Some(5));
+
+        e.apply(Command::Stop, &cfg);
+        e.apply(Command::Start, &cfg);
+        for _ in 0..4 {
+            assert!(e.tick(Instant::now(), &cfg).heartbeat.is_none());
+        }
+        assert_eq!(e.tick(Instant::now(), &cfg).heartbeat, Some(5));
     }
 }
