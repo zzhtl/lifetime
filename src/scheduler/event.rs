@@ -34,6 +34,8 @@ pub enum Command {
 pub struct ApplyOutcome {
     /// 运行状态发生变化时上报给 UI
     pub state_changed: Option<RunState>,
+    /// 会话停止前的最终累计秒数，用于 UI/数据库准确收尾。
+    pub session_ended_secs: Option<u64>,
     /// 需要立即触发的提醒（TriggerNow）
     pub triggered: Option<ReminderKind>,
 }
@@ -45,6 +47,10 @@ pub struct TickOutcome {
     pub triggered: Vec<ReminderKind>,
     /// 需要上报的心跳（当前会话已运行秒数）
     pub heartbeat: Option<u64>,
+    /// 自动停止前的最终累计秒数。
+    pub session_ended_secs: Option<u64>,
+    /// 自动排班导致的状态变化。
+    pub state_changed: Option<RunState>,
 }
 
 /// Scheduler → UI 事件
@@ -54,6 +60,8 @@ pub enum SchedulerEvent {
     Triggered(ReminderKind),
     /// 状态机变化（开始/暂停/恢复/停止）
     StateChanged(RunState),
+    /// 会话已结束，携带本次会话准确时长。
+    SessionEnded { running_secs: u64 },
     /// 心跳：当前会话已运行秒数
     Heartbeat { running_secs: u64 },
 }

@@ -56,6 +56,9 @@ fn focus_panel(app: &mut App, ui: &mut egui::Ui) {
         pomodoro_enabled,
         pomodoro_focus,
         pomodoro_break,
+        auto_schedule,
+        work_start,
+        work_end,
     ) = {
         let config = app
             .config
@@ -69,6 +72,9 @@ fn focus_panel(app: &mut App, ui: &mut egui::Ui) {
             config.reminders.enabled.pomodoro,
             config.reminders.pomodoro_focus_sec,
             config.reminders.pomodoro_break_sec,
+            config.general.auto_schedule,
+            config.general.work_start.clone(),
+            config.general.work_end.clone(),
         )
     };
 
@@ -86,6 +92,11 @@ fn focus_panel(app: &mut App, ui: &mut egui::Ui) {
             ui.columns(2, |columns| {
                 let left = &mut columns[0];
                 let (status, hint, color) = match app.run_state {
+                    RunState::Idle if auto_schedule => (
+                        "等待自动开始",
+                        "应用会在设定的工作时段自动开始提醒，也可随时手动开始",
+                        theme::INFO,
+                    ),
                     RunState::Idle => ("尚未开始", "启动后将按你的节奏安排健康提醒", theme::TEXT),
                     RunState::Running => ("专注进行中", "计时与提醒正在后台持续运行", theme::ACCENT),
                     RunState::Paused => ("会话已暂停", "暂停期间不会累计工作时间", theme::WARN),
@@ -104,6 +115,13 @@ fn focus_panel(app: &mut App, ui: &mut egui::Ui) {
                 left.label(RichText::new("本次会话").size(12.5).color(theme::TEXT_WEAK));
                 left.add_space(8.0);
                 left.add(egui::Label::new(RichText::new(hint).size(12.5).color(theme::TEXT_WEAK)).wrap());
+                if auto_schedule {
+                    left.label(
+                        RichText::new(format!("自动时段  {work_start}–{work_end}"))
+                            .size(12.0)
+                            .color(theme::INFO),
+                    );
+                }
                 left.add_space(14.0);
                 session_controls(app, left);
 
@@ -160,7 +178,7 @@ fn session_controls(app: &mut App, ui: &mut egui::Ui) {
         RunState::Idle => {
             if ui
                 .add(
-                    egui::Button::new(RichText::new("▶  开始专注").strong())
+                    egui::Button::new(RichText::new("▶  现在开始").strong())
                         .fill(theme::ACCENT.linear_multiply(0.38))
                         .min_size(egui::vec2(132.0, 36.0)),
                 )

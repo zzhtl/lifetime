@@ -58,6 +58,8 @@ pub struct App {
     pub view: View,
     pub run_state: RunState,
     pub running_secs: u64,
+    /// 当前会话开始前，数据库中已有的今日累计工作秒数。
+    pub today_work_base_secs: i64,
     pub session_id: Option<i64>,
     pub today: DailySummary,
     pub stats: StatsView,
@@ -113,6 +115,7 @@ impl App {
             view: View::Dashboard,
             run_state: RunState::Idle,
             running_secs: 0,
+            today_work_base_secs: today.work_seconds,
             session_id: None,
             today,
             stats,
@@ -138,19 +141,45 @@ impl App {
         for ev in events {
             match ev {
                 SchedulerEvent::Heartbeat { running_secs, .. } => {
+                    self.refresh_daily_state_if_needed();
                     self.running_secs = running_secs;
-                    // 顺便累计当日工作秒数
-                    self.today.work_seconds = self.running_secs as i64;
+                    self.today.work_seconds = self.today_work_base_secs + self.running_secs as i64;
                     let _ = db::upsert_today(&self.db, &self.today);
                 }
                 SchedulerEvent::StateChanged(state) => {
+                    let previous = self.run_state;
+                    if state == RunState::Running && previous == RunState::Idle {
+                        self.refresh_daily_state_if_needed();
+                    }
                     self.run_state = state;
-                    if state == RunState::Idle {
-                        if let Some(sid) = self.session_id.take() {
-                            let _ = db::end_session(&self.db, sid, self.running_secs as i64);
+                    if state == RunState::Running && previous == RunState::Idle {
+                        self.today_work_base_secs = self.today.work_seconds;
+                        self.start_session_if_needed();
+                    }
+                    if state == RunState::Idle && previous != RunState::Idle {
+                        if self.pending_break.take().is_some() {
+                            self.record_big_break(false);
                         }
+                        self.finish_session(self.running_secs);
                         self.running_secs = 0;
                     }
+                    if state == RunState::Idle && previous != RunState::Idle {
+                        self.refresh_daily_state_if_needed();
+                    }
+                    ctx.request_repaint();
+                }
+                SchedulerEvent::SessionEnded { running_secs } => {
+                    if self.pending_break.take().is_some() {
+                        self.record_big_break(false);
+                    }
+                    self.running_secs = running_secs;
+                    self.today.work_seconds = self.today_work_base_secs + running_secs as i64;
+                    self.finish_session(running_secs);
+                    let _ = db::upsert_today(&self.db, &self.today);
+                    self.today_work_base_secs = self.today.work_seconds;
+                    self.running_secs = 0;
+                    self.run_state = RunState::Idle;
+                    self.refresh_daily_state_if_needed();
                     ctx.request_repaint();
                 }
                 SchedulerEvent::Triggered(kind) => {
@@ -291,10 +320,37 @@ impl App {
         }
     }
 
+    /// 收尾当前会话。
+    fn finish_session(&mut self, running_secs: u64) {
+        if let Some(sid) = self.session_id.take() {
+            let _ = db::end_session(&self.db, sid, running_secs as i64);
+        }
+    }
+
     fn refresh_stats(&mut self) {
         if let Ok(s) = StatsView::load(&self.db) {
             self.stats = s;
         }
+    }
+
+    fn refresh_daily_state_if_needed(&mut self) {
+        // 正在运行的会话可能跨过午夜；等会话收尾后再把累计秒数归入新的一天。
+        if self.run_state != RunState::Idle || self.session_id.is_some() {
+            return;
+        }
+        let today = Local::now().format("%Y-%m-%d").to_string();
+        if self.today.date == today {
+            return;
+        }
+        self.today = db::get_today(&self.db).unwrap_or(DailySummary {
+            date: today,
+            ..Default::default()
+        });
+        self.today_work_base_secs = self.today.work_seconds;
+        self.cultivation.today_logged = db::practice_logged_today(&self.db).unwrap_or_default();
+        self.refresh_breathing_stats();
+        self.last_reminder = None;
+        self.refresh_stats();
     }
 }
 
@@ -304,6 +360,7 @@ impl eframe::App for App {
         ctx.request_repaint_after(Duration::from_millis(1000));
 
         self.drain_events(ctx);
+        self.refresh_daily_state_if_needed();
 
         // 倒计时模态窗：用 ctx.memory 累加 dt，每满 1 秒推进一次
         if let Some(ref mut b) = self.pending_break {
@@ -462,9 +519,9 @@ impl eframe::App for App {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        if let Some(sid) = self.session_id.take() {
-            let _ = db::end_session(&self.db, sid, self.running_secs as i64);
-        }
+        self.finish_session(self.running_secs);
+        self.today.work_seconds = self.today_work_base_secs + self.running_secs as i64;
+        let _ = db::upsert_today(&self.db, &self.today);
         let _ = self.sched.cmd_tx.send(Command::Quit);
     }
 }
@@ -473,8 +530,17 @@ impl App {
     fn compact_controls(&mut self, ui: &mut egui::Ui) {
         match self.run_state {
             RunState::Idle => {
+                let auto_schedule = self
+                    .config
+                    .lock()
+                    .map(|cfg| cfg.general.auto_schedule)
+                    .unwrap_or(false);
                 ui.label(
-                    RichText::new("会话尚未开始")
+                    RichText::new(if auto_schedule {
+                        "等待自动开始"
+                    } else {
+                        "会话尚未开始"
+                    })
                         .size(12.5)
                         .color(ui::theme::TEXT_WEAK),
                 );

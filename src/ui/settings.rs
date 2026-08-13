@@ -40,6 +40,8 @@ impl SettingsTab {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TimeErrors {
+    pub work_start: Option<&'static str>,
+    pub work_end: Option<&'static str>,
     pub lunch: Option<&'static str>,
     pub sleep: Option<&'static str>,
     pub quiet_start: Option<&'static str>,
@@ -48,7 +50,9 @@ pub struct TimeErrors {
 
 impl TimeErrors {
     fn is_empty(&self) -> bool {
-        self.lunch.is_none()
+        self.work_start.is_none()
+            && self.work_end.is_none()
+            && self.lunch.is_none()
             && self.sleep.is_none()
             && self.quiet_start.is_none()
             && self.quiet_end.is_none()
@@ -81,7 +85,22 @@ impl SettingsState {
 
     fn validate(&mut self) -> bool {
         const MESSAGE: &str = "请输入 HH:MM 格式的有效时间";
+        const EQUAL_MESSAGE: &str = "开始与停止时间不能相同";
+        let work_start_valid = is_strict_hhmm(&self.draft.general.work_start);
+        let work_end_valid = is_strict_hhmm(&self.draft.general.work_end);
+        let equal_work_times = self.draft.general.auto_schedule
+            && work_start_valid
+            && work_end_valid
+            && self.draft.general.work_start.trim() == self.draft.general.work_end.trim();
         self.errors = TimeErrors {
+            work_start: (self.draft.general.auto_schedule && !work_start_valid).then_some(MESSAGE),
+            work_end: if self.draft.general.auto_schedule && !work_end_valid {
+                Some(MESSAGE)
+            } else if equal_work_times {
+                Some(EQUAL_MESSAGE)
+            } else {
+                None
+            },
             lunch: (!is_strict_hhmm(&self.draft.reminders.lunch_time)).then_some(MESSAGE),
             sleep: (!is_strict_hhmm(&self.draft.reminders.sleep_time)).then_some(MESSAGE),
             quiet_start: (!is_strict_hhmm(&self.draft.general.quiet_start)).then_some(MESSAGE),
@@ -286,6 +305,43 @@ fn rhythm_tab(cfg: &mut Config, ui: &mut egui::Ui) -> bool {
 
 fn schedule_tab(cfg: &mut Config, errors: &TimeErrors, ui: &mut egui::Ui) -> bool {
     let mut changed = false;
+    setting_group(
+        ui,
+        "自动工作时段",
+        "应用保持运行时自动开始与停止；手动结束后当天不会再次自动启动。",
+        |ui| {
+            changed |= toggle_row(
+                ui,
+                "启用自动开始/停止",
+                "默认每天 09:00 开始，19:00 停止",
+                &mut cfg.general.auto_schedule,
+            );
+            ui.add_enabled_ui(cfg.general.auto_schedule, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("开始");
+                    changed |= time_input(ui, &mut cfg.general.work_start, errors.work_start);
+                    ui.label(RichText::new("停止").color(theme::TEXT_WEAK));
+                    changed |= time_input(ui, &mut cfg.general.work_end, errors.work_end);
+                });
+            });
+            if errors.work_start.is_some() || errors.work_end.is_some() {
+                ui.label(
+                    RichText::new("请输入 HH:MM 格式的有效工作时段")
+                        .size(12.0)
+                        .color(theme::DANGER),
+                );
+            }
+            if cfg.general.auto_schedule && cfg.general.work_start == cfg.general.work_end {
+                ui.label(
+                    RichText::new("开始与停止时间不能相同")
+                        .size(12.0)
+                        .color(theme::DANGER),
+                );
+            }
+        },
+    );
+
+    ui.add_space(12.0);
     setting_group(ui, "固定时间", "按本地时间提醒午餐和睡眠。", |ui| {
         changed |= time_row(
             ui,
@@ -450,12 +506,16 @@ fn application_tab(
 
 fn save_draft(app: &mut App) {
     if !app.settings.validate() {
-        app.settings.tab = if app.settings.errors.lunch.is_some() || app.settings.errors.sleep.is_some() {
+        app.settings.tab = if app.settings.errors.work_start.is_some()
+            || app.settings.errors.work_end.is_some()
+            || app.settings.errors.lunch.is_some()
+            || app.settings.errors.sleep.is_some()
+        {
             SettingsTab::Schedule
         } else {
             SettingsTab::Notification
         };
-        app.show_error("部分时间格式无效，请修正后再保存");
+        app.show_error("工作时段或其他时间格式无效，请修正后再保存");
         return;
     }
 
@@ -612,10 +672,14 @@ mod tests {
         let mut state = SettingsState::new(&Config::default());
         state.draft.reminders.lunch_time = "25:00".into();
         state.draft.reminders.sleep_time = "bad".into();
+        state.draft.general.work_start = "9:00".into();
+        state.draft.general.work_end = "24:00".into();
         state.draft.general.quiet_start = "9:00".into();
         state.draft.general.quiet_end = String::new();
 
         assert!(!state.validate());
+        assert!(state.errors.work_start.is_some());
+        assert!(state.errors.work_end.is_some());
         assert!(state.errors.lunch.is_some());
         assert!(state.errors.sleep.is_some());
         assert!(state.errors.quiet_start.is_some());
@@ -635,5 +699,16 @@ mod tests {
         state.reset(&live);
         assert!(!state.dirty);
         assert_eq!(state.draft.general.volume, live.general.volume);
+    }
+
+    #[test]
+    fn equal_work_times_are_rejected_when_auto_schedule_is_enabled() {
+        let mut state = SettingsState::new(&Config::default());
+        state.draft.general.work_start = "09:00".into();
+        state.draft.general.work_end = "09:00".into();
+        assert!(!state.validate());
+
+        state.draft.general.auto_schedule = false;
+        assert!(state.validate());
     }
 }

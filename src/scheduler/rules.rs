@@ -9,7 +9,7 @@
 //   - 微提醒（护眼/起身/喝水/颈椎）做全局错开：到点先入队，按 min_notify_gap_sec
 //     每隔一段只补发一条（FIFO，公平轮转），保证该间隔内不出现两次微提醒。
 
-use chrono::{Local, NaiveTime, Timelike};
+use chrono::{Local, NaiveDate, NaiveTime, Timelike};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -44,6 +44,10 @@ pub struct Engine {
     last_emit_secs: Option<u64>,
     /// 已到点但被错开推迟的微提醒队列（FIFO，按种类去重，至多 4 条）
     pending_micro: Vec<ReminderKind>,
+    /// 用户手动结束会话后，当天不再被自动排班重新启动。
+    manual_stop_date: Option<NaiveDate>,
+    /// 当前会话归属日期；跨天工作窗口会先收尾旧会话再启动新会话。
+    session_date: Option<NaiveDate>,
 }
 
 /// 受全局错开约束的微提醒种类（到点先入队，按最小间隔逐条补发）
@@ -67,6 +71,8 @@ impl Engine {
             off_work_fired_date: None,
             last_emit_secs: None,
             pending_micro: Vec::new(),
+            manual_stop_date: None,
+            session_date: None,
         }
     }
 
@@ -75,16 +81,17 @@ impl Engine {
         match cmd {
             Command::Start => {
                 if self.state == RunState::Idle {
-                    self.running_secs = 0;
-                    self.last_fire.clear();
-                    self.phase = Phase::Focus;
-                    self.big_break_secs = 0;
-                    self.last_heartbeat = 0;
-                    self.fired_today.clear();
-                    self.off_work_fired_date = None;
-                    self.last_emit_secs = None;
-                    self.pending_micro.clear();
+                    self.reset_session();
                 }
+                let now = Local::now();
+                self.manual_stop_date = None;
+                self.session_date = schedule_day(
+                    &cfg.general.work_start,
+                    &cfg.general.work_end,
+                    now.date_naive(),
+                    now.time(),
+                )
+                .or(Some(now.date_naive()));
                 self.state = RunState::Running;
                 out.state_changed = Some(self.state);
             }
@@ -101,11 +108,18 @@ impl Engine {
                 }
             }
             Command::Stop => {
+                out.session_ended_secs = Some(self.running_secs);
+                let now = Local::now();
+                self.manual_stop_date = schedule_day(
+                    &cfg.general.work_start,
+                    &cfg.general.work_end,
+                    now.date_naive(),
+                    now.time(),
+                )
+                .or(Some(now.date_naive()));
                 self.state = RunState::Idle;
-                self.running_secs = 0;
-                self.big_break_secs = 0;
-                self.last_emit_secs = None;
-                self.pending_micro.clear();
+                self.session_date = None;
+                self.clear_runtime_after_stop();
                 out.state_changed = Some(self.state);
             }
             Command::Skip(kind) => {
@@ -143,8 +157,69 @@ impl Engine {
         out
     }
 
+    fn reset_session(&mut self) {
+        self.running_secs = 0;
+        self.last_fire.clear();
+        self.phase = Phase::Focus;
+        self.big_break_secs = 0;
+        self.last_heartbeat = 0;
+        self.fired_today.clear();
+        self.off_work_fired_date = None;
+        self.last_emit_secs = None;
+        self.pending_micro.clear();
+    }
+
+    fn clear_runtime_after_stop(&mut self) {
+        self.running_secs = 0;
+        self.big_break_secs = 0;
+        self.last_emit_secs = None;
+        self.pending_micro.clear();
+    }
+
     pub fn tick(&mut self, _now: Instant, cfg: &Config) -> TickOutcome {
+        let local_now = Local::now();
+        self.tick_at(cfg, local_now.date_naive(), local_now.time())
+    }
+
+    fn tick_at(&mut self, cfg: &Config, today_date: NaiveDate, now_time: NaiveTime) -> TickOutcome {
         let mut out = TickOutcome::default();
+
+        if cfg.general.auto_schedule {
+            let work_day = schedule_day(
+                &cfg.general.work_start,
+                &cfg.general.work_end,
+                today_date,
+                now_time,
+            );
+            let Some(work_day) = work_day else {
+                if self.state != RunState::Idle {
+                    out.session_ended_secs = Some(self.running_secs);
+                    self.state = RunState::Idle;
+                    self.session_date = None;
+                    self.clear_runtime_after_stop();
+                    out.state_changed = Some(RunState::Idle);
+                }
+                return out;
+            };
+            if self.state != RunState::Idle && self.session_date != Some(work_day) {
+                out.session_ended_secs = Some(self.running_secs);
+                self.state = RunState::Idle;
+                self.session_date = None;
+                self.clear_runtime_after_stop();
+                out.state_changed = Some(RunState::Idle);
+                return out;
+            }
+            // 每天首次进入工作窗口自动开始；当天手动停止后保持空闲。
+            if self.state == RunState::Idle
+                && self.manual_stop_date != Some(work_day)
+            {
+                self.reset_session();
+                self.state = RunState::Running;
+                self.session_date = Some(work_day);
+                out.state_changed = Some(RunState::Running);
+            }
+        }
+
         if self.state != RunState::Running {
             return out;
         }
@@ -158,7 +233,11 @@ impl Engine {
             out.heartbeat = Some(self.running_secs);
         }
 
-        let in_quiet = in_quiet_hours(&cfg.general.quiet_start, &cfg.general.quiet_end);
+        let in_quiet = in_quiet_hours(
+            &cfg.general.quiet_start,
+            &cfg.general.quiet_end,
+            now_time,
+        );
 
         // 1) 周期型微提醒：到点不直接触发，而是入队（FIFO，去重），由末尾错开逻辑补发
         for kind in MICRO_KINDS {
@@ -211,8 +290,7 @@ impl Engine {
         }
 
         // 4) 时间点型：午餐 / 睡眠（按本地时钟）
-        let today = Local::now().format("%Y-%m-%d").to_string();
-        let now_time = Local::now().time();
+        let today = today_date.format("%Y-%m-%d").to_string();
         check_time_point(
             ReminderKind::Lunch,
             &cfg.reminders.lunch_time,
@@ -268,6 +346,25 @@ impl Engine {
     }
 }
 
+/// 返回当前工作窗口所属的日期；跨午夜时，00:00–结束时间归到前一天窗口。
+fn schedule_day(start: &str, end: &str, date: NaiveDate, now: NaiveTime) -> Option<NaiveDate> {
+    let (Some(s), Some(e)) = (parse_hhmm(start), parse_hhmm(end)) else {
+        return None;
+    };
+    if s == e {
+        return None;
+    }
+    if s < e {
+        (now >= s && now < e).then_some(date)
+    } else if now >= s {
+        Some(date)
+    } else if now < e {
+        date.pred_opt()
+    } else {
+        None
+    }
+}
+
 fn check_time_point(
     kind: ReminderKind,
     hhmm: &str,
@@ -286,22 +383,20 @@ fn check_time_point(
     // 在目标时间所在分钟内（second 不限）且当日未触发过
     if now.hour() == target.hour() && now.minute() == target.minute() {
         let key = (kind, today.to_string());
-        if !fired.contains_key(&key) {
-            fired.insert(key, ());
+        if fired.insert(key, ()).is_none() {
             triggered.push(kind);
         }
     }
 }
 
 /// 判断当前本地时间是否处于勿扰时段（支持跨夜的形式）
-fn in_quiet_hours(start: &str, end: &str) -> bool {
+fn in_quiet_hours(start: &str, end: &str, now: NaiveTime) -> bool {
     let (Some(s), Some(e)) = (parse_hhmm(start), parse_hhmm(end)) else {
         return false;
     };
     if s == e {
         return false;
     }
-    let now = Local::now().time();
     if s < e {
         now >= s && now < e
     } else {
@@ -317,6 +412,8 @@ mod tests {
 
     fn fast_cfg() -> Config {
         let mut cfg = Config::default();
+        // 规则单测按手动状态机推进，自动排班由独立用例覆盖。
+        cfg.general.auto_schedule = false;
         // 加速测试：把所有周期改为秒级
         cfg.reminders.eyes_interval_sec = 3;
         cfg.reminders.stand_interval_sec = 5;
@@ -452,5 +549,137 @@ mod tests {
             assert!(e.tick(Instant::now(), &cfg).heartbeat.is_none());
         }
         assert_eq!(e.tick(Instant::now(), &cfg).heartbeat, Some(5));
+    }
+
+    #[test]
+    fn work_window_includes_start_and_excludes_end() {
+        let date = NaiveDate::from_ymd_opt(2026, 8, 13).unwrap();
+        assert_eq!(
+            schedule_day("09:00", "19:00", date, NaiveTime::from_hms_opt(9, 0, 0).unwrap()),
+            Some(date)
+        );
+        assert_eq!(
+            schedule_day(
+                "09:00",
+                "19:00",
+                date,
+                NaiveTime::from_hms_opt(18, 59, 59).unwrap()
+            ),
+            Some(date)
+        );
+        assert_eq!(
+            schedule_day("09:00", "19:00", date, NaiveTime::from_hms_opt(19, 0, 0).unwrap()),
+            None
+        );
+        assert_eq!(
+            schedule_day("09:00", "19:00", date, NaiveTime::from_hms_opt(8, 59, 59).unwrap()),
+            None
+        );
+    }
+
+    #[test]
+    fn work_window_supports_overnight_and_rejects_equal_times() {
+        let date = NaiveDate::from_ymd_opt(2026, 8, 13).unwrap();
+        assert_eq!(
+            schedule_day("22:00", "06:00", date, NaiveTime::from_hms_opt(23, 0, 0).unwrap()),
+            Some(date)
+        );
+        assert_eq!(
+            schedule_day(
+                "22:00",
+                "06:00",
+                date,
+                NaiveTime::from_hms_opt(5, 59, 59).unwrap()
+            ),
+            date.pred_opt()
+        );
+        assert_eq!(
+            schedule_day("09:00", "09:00", date, NaiveTime::from_hms_opt(9, 0, 0).unwrap()),
+            None
+        );
+    }
+
+    #[test]
+    fn auto_schedule_starts_stops_and_respects_manual_stop() {
+        let mut e = Engine::new();
+        let mut cfg = fast_cfg();
+        cfg.general.auto_schedule = true;
+        cfg.general.work_start = "09:00".into();
+        cfg.general.work_end = "19:00".into();
+        let today = Local::now().date_naive();
+
+        let before = e.tick_at(&cfg, today, NaiveTime::from_hms_opt(8, 59, 59).unwrap());
+        assert!(before.state_changed.is_none());
+
+        let started = e.tick_at(&cfg, today, NaiveTime::from_hms_opt(9, 0, 0).unwrap());
+        assert_eq!(started.state_changed, Some(RunState::Running));
+
+        e.apply(Command::Stop, &cfg);
+        let still_idle = e.tick_at(&cfg, today, NaiveTime::from_hms_opt(10, 0, 0).unwrap());
+        assert!(still_idle.state_changed.is_none());
+        assert_eq!(e.state, RunState::Idle);
+
+        let tomorrow = today.succ_opt().unwrap();
+        let next_day = e.tick_at(&cfg, tomorrow, NaiveTime::from_hms_opt(9, 0, 0).unwrap());
+        assert_eq!(next_day.state_changed, Some(RunState::Running));
+
+        let stopped = e.tick_at(&cfg, tomorrow, NaiveTime::from_hms_opt(19, 0, 0).unwrap());
+        assert_eq!(stopped.state_changed, Some(RunState::Idle));
+        assert!(stopped.session_ended_secs.is_some());
+    }
+
+    #[test]
+    fn manual_pause_is_not_overridden_by_auto_schedule() {
+        let mut e = Engine::new();
+        let mut cfg = fast_cfg();
+        cfg.general.auto_schedule = true;
+        let today = Local::now().date_naive();
+
+        e.tick_at(&cfg, today, NaiveTime::from_hms_opt(9, 0, 0).unwrap());
+        e.apply(Command::Pause, &cfg);
+        let out = e.tick_at(&cfg, today, NaiveTime::from_hms_opt(10, 0, 0).unwrap());
+        assert!(out.state_changed.is_none());
+        assert_eq!(e.state, RunState::Paused);
+    }
+
+    #[test]
+    fn toggling_auto_schedule_off_then_on_can_start_again() {
+        let mut e = Engine::new();
+        let mut cfg = fast_cfg();
+        cfg.general.auto_schedule = true;
+        let today = Local::now().date_naive();
+
+        e.tick_at(&cfg, today, NaiveTime::from_hms_opt(9, 0, 0).unwrap());
+        e.tick_at(&cfg, today, NaiveTime::from_hms_opt(19, 0, 0).unwrap());
+        cfg.general.auto_schedule = false;
+        e.tick_at(&cfg, today, NaiveTime::from_hms_opt(19, 1, 0).unwrap());
+        cfg.general.auto_schedule = true;
+        cfg.general.work_end = "20:00".into();
+        let restarted = e.tick_at(&cfg, today, NaiveTime::from_hms_opt(19, 1, 0).unwrap());
+        assert_eq!(restarted.state_changed, Some(RunState::Running));
+    }
+
+    #[test]
+    fn overnight_schedule_keeps_session_across_midnight() {
+        let mut e = Engine::new();
+        let mut cfg = fast_cfg();
+        cfg.general.auto_schedule = true;
+        cfg.general.work_start = "22:00".into();
+        cfg.general.work_end = "06:00".into();
+        let date = NaiveDate::from_ymd_opt(2026, 8, 13).unwrap();
+
+        let started = e.tick_at(&cfg, date, NaiveTime::from_hms_opt(22, 0, 0).unwrap());
+        assert_eq!(started.state_changed, Some(RunState::Running));
+        for _ in 0..3 {
+            e.tick_at(&cfg, date.succ_opt().unwrap(), NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+        }
+        assert_eq!(e.state, RunState::Running);
+
+        let stopped = e.tick_at(
+            &cfg,
+            date.succ_opt().unwrap(),
+            NaiveTime::from_hms_opt(6, 0, 0).unwrap(),
+        );
+        assert_eq!(stopped.state_changed, Some(RunState::Idle));
     }
 }

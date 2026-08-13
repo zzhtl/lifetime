@@ -68,6 +68,15 @@ pub struct ReminderToggle {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneralConfig {
+    /// 是否按工作时段自动开始/停止会话
+    #[serde(default = "default_auto_schedule")]
+    pub auto_schedule: bool,
+    /// 每日自动开始时间（HH:MM）
+    #[serde(default = "default_work_start")]
+    pub work_start: String,
+    /// 每日自动停止时间（HH:MM）
+    #[serde(default = "default_work_end")]
+    pub work_end: String,
     /// 桌面通知是否开启
     pub desktop_notify: bool,
     /// 声音提示是否开启
@@ -88,6 +97,18 @@ pub struct GeneralConfig {
 
 fn default_min_gap() -> u64 {
     10 * 60
+}
+
+fn default_auto_schedule() -> bool {
+    true
+}
+
+fn default_work_start() -> String {
+    "09:00".to_string()
+}
+
+fn default_work_end() -> String {
+    "19:00".to_string()
 }
 
 #[derive(Debug, Clone, Default)]
@@ -145,6 +166,9 @@ impl Default for ReminderToggle {
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
+            auto_schedule: default_auto_schedule(),
+            work_start: default_work_start(),
+            work_end: default_work_end(),
             desktop_notify: true,
             sound_enabled: true,
             volume: 0.6,
@@ -209,6 +233,20 @@ pub fn load_or_default() -> Result<Config> {
         match toml::from_str::<Config>(&text) {
             Ok(mut c) => {
                 c.paths = paths;
+                // 为旧版本配置补写新增字段，避免用户需要手动打开设置页才能落盘默认排班。
+                let schedule_missing = toml::from_str::<toml::Value>(&text)
+                    .ok()
+                    .and_then(|v| v.get("general").cloned())
+                    .and_then(|v| v.as_table().cloned())
+                    .map(|table| {
+                        !table.contains_key("auto_schedule")
+                            || !table.contains_key("work_start")
+                            || !table.contains_key("work_end")
+                    })
+                    .unwrap_or(true);
+                if schedule_missing {
+                    save(&c)?;
+                }
                 c
             }
             Err(e) => {
@@ -241,4 +279,36 @@ pub fn save(cfg: &Config) -> Result<()> {
 /// 解析 "HH:MM" 形式时间
 pub fn parse_hhmm(s: &str) -> Option<NaiveTime> {
     NaiveTime::parse_from_str(s.trim(), "%H:%M").ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_enables_nine_to_seven_schedule() {
+        let cfg = Config::default();
+        assert!(cfg.general.auto_schedule);
+        assert_eq!(cfg.general.work_start, "09:00");
+        assert_eq!(cfg.general.work_end, "19:00");
+    }
+
+    #[test]
+    fn legacy_general_config_gets_schedule_defaults() {
+        let cfg = Config::default();
+        let text = toml::to_string(&cfg).unwrap();
+        let mut value = toml::from_str::<toml::Value>(&text).unwrap();
+        let general = value
+            .get_mut("general")
+            .and_then(toml::Value::as_table_mut)
+            .unwrap();
+        general.remove("auto_schedule");
+        general.remove("work_start");
+        general.remove("work_end");
+
+        let loaded: Config = toml::from_str(&toml::to_string(&value).unwrap()).unwrap();
+        assert!(loaded.general.auto_schedule);
+        assert_eq!(loaded.general.work_start, "09:00");
+        assert_eq!(loaded.general.work_end, "19:00");
+    }
 }

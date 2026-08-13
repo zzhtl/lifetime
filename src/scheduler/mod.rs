@@ -82,6 +82,13 @@ fn run_loop(
             last_tick += tick;
             let cfg = config.lock().unwrap().clone();
             let out = engine.tick(Instant::now(), &cfg);
+            if let Some(running_secs) = out.session_ended_secs {
+                let _ = evt_tx.send(SchedulerEvent::SessionEnded { running_secs });
+            }
+            // 先发送收尾时长，再发送 Idle 状态，UI 才能用最终秒数关闭数据库会话。
+            if let Some(state) = out.state_changed {
+                let _ = evt_tx.send(SchedulerEvent::StateChanged(state));
+            }
             if let Some(running_secs) = out.heartbeat {
                 let _ = evt_tx.send(SchedulerEvent::Heartbeat { running_secs });
             }
@@ -119,6 +126,9 @@ fn process_command(
         ),
         other => {
             let out = engine.apply(other, &cfg);
+            if let Some(running_secs) = out.session_ended_secs {
+                let _ = evt_tx.send(SchedulerEvent::SessionEnded { running_secs });
+            }
             if let Some(state) = out.state_changed {
                 let _ = evt_tx.send(SchedulerEvent::StateChanged(state));
             }
@@ -208,6 +218,7 @@ mod tests {
     #[test]
     fn scheduler_fires_without_ui() {
         let mut cfg = Config::default();
+        cfg.general.auto_schedule = false;
         cfg.reminders.eyes_interval_sec = 1;
         cfg.general.quiet_start = "00:00".into();
         cfg.general.quiet_end = "00:00".into();
