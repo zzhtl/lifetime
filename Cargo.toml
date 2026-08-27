@@ -3,8 +3,23 @@ name = "lifetime"
 version = "0.1.0"
 edition = "2021"
 description = "程序员/久坐人群的科学健康提醒工具"
-license = "MIT"
+license = "Apache-2.0"
 authors = ["zzhtl"]
+repository = "https://github.com/zzhtl/lifetime"
+
+# cargo-deb 打包配置（Release CI 中生成 .deb）
+[package.metadata.deb]
+maintainer = "zzhtl <zzhtl@users.noreply.github.com>"
+copyright = "2026, zzhtl"
+section = "utils"
+priority = "optional"
+# libasound2: ALSA 运行库（Ubuntu 24.04 起改名 libasound2t64）
+# libgl1: eframe/glow 运行时 dlopen OpenGL，dpkg-shlibdeps 探测不到，需显式声明
+depends = "libasound2t64 | libasound2, libgl1"
+extended-description = """\
+按时间节律自动提醒护眼、起身、喝水、颈椎活动、番茄钟与强制大休息，\
+内置健康知识库与长期统计。数据本地保存（SQLite），不联网。\
+首次运行自动创建应用菜单快捷方式。"""
 
 [dependencies]
 eframe = { version = "0.29", default-features = false, features = [

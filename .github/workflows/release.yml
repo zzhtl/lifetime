@@ -1,0 +1,120 @@
+# Release 自动打包
+#
+# 触发：推送 v* tag（如 v0.1.0）。
+# 产物：
+#   - lifetime-<tag>-x86_64-unknown-linux-gnu.tar.gz   （Linux 通用二进制）
+#   - lifetime_<ver>-1_amd64.deb                        （Ubuntu / Debian 安装包）
+#   - lifetime-<tag>-x86_64-pc-windows-msvc.zip         （Windows）
+#   - sha256sums.txt                                    （install.sh 校验用）
+#
+# Linux 构建跑在 ubuntu:22.04 容器内（而非 ubuntu-22.04 runner，该 runner
+# 2026-09 起 brownout、2027-04 下线），保证 glibc 兼容下限为 2.35，
+# 产物可运行于 Ubuntu 22.04+ / Debian 12+。
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  BIN_NAME: lifetime
+
+jobs:
+  check-version:
+    name: 校验 tag 与 Cargo.toml 版本一致
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 比对版本号
+        run: |
+          crate_ver=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)"/\1/')
+          tag_ver="${GITHUB_REF_NAME#v}"
+          if [ "$crate_ver" != "$tag_ver" ]; then
+            echo "::error::Cargo.toml version ($crate_ver) != tag ($tag_ver)，请先更新 Cargo.toml 再打 tag"
+            exit 1
+          fi
+
+  build-linux:
+    name: Linux (x86_64-gnu + deb)
+    needs: check-version
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    env:
+      TARGET: x86_64-unknown-linux-gnu
+    steps:
+      - name: 安装系统构建依赖
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            curl ca-certificates git build-essential pkg-config libasound2-dev
+      - uses: actions/checkout@v4
+      - name: 安装 Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
+            | sh -s -- -y --default-toolchain stable --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@v2
+      - name: 安装 cargo-deb
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb
+      - name: 构建
+        run: cargo build --release --locked
+      - name: 打包 tar.gz
+        run: |
+          mkdir -p dist stage
+          cp "target/release/$BIN_NAME" LICENSE README.md stage/
+          tar -C stage -czf "dist/$BIN_NAME-$GITHUB_REF_NAME-$TARGET.tar.gz" .
+      - name: 打包 deb
+        run: |
+          cargo deb --no-build --no-strip
+          cp target/debian/*.deb dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*
+          if-no-files-found: error
+
+  build-windows:
+    name: Windows (x86_64-msvc)
+    needs: check-version
+    runs-on: windows-latest
+    env:
+      TARGET: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: 构建
+        run: cargo build --release --locked
+      - name: 打包 zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist, stage | Out-Null
+          Copy-Item "target/release/$env:BIN_NAME.exe", LICENSE, README.md stage/
+          Compress-Archive -Path stage/* -DestinationPath "dist/$env:BIN_NAME-$env:GITHUB_REF_NAME-$env:TARGET.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: 创建 GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: 生成校验和
+        working-directory: dist
+        run: sha256sum -- * > sha256sums.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
