@@ -59,9 +59,9 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - uses: Swatinem/rust-cache@v2
       - name: 安装 cargo-deb
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deb
+        # 编译安装而非 taiki-e/install-action：后者在 ubuntu:22.04 容器内失败
+        # （v0.1.0 首次发布时踩到），cargo install 慢 2-3 分钟但无环境依赖
+        run: cargo install cargo-deb --locked
       - name: 构建
         run: cargo build --release --locked
       - name: 打包 tar.gz
