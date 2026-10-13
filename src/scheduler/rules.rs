@@ -260,14 +260,16 @@ impl Engine {
 
         // 2) 番茄钟：当前阶段满了 → 切阶段并触发对应事件
         if cfg.reminders.enabled.pomodoro {
-            let (cur_kind, target_phase, interval) = match self.phase {
+            let (cur_kind, next_kind, target_phase, interval) = match self.phase {
                 Phase::Focus => (
                     ReminderKind::PomodoroBreak,
+                    ReminderKind::PomodoroFocus,
                     Phase::Break,
                     cfg.reminders.pomodoro_focus_sec,
                 ),
                 Phase::Break => (
                     ReminderKind::PomodoroFocus,
+                    ReminderKind::PomodoroBreak,
                     Phase::Focus,
                     cfg.reminders.pomodoro_break_sec,
                 ),
@@ -275,6 +277,8 @@ impl Engine {
             let last = self.last_fire.get(&cur_kind).copied().unwrap_or(0);
             if self.running_secs.saturating_sub(last) >= interval {
                 self.last_fire.insert(cur_kind, self.running_secs);
+                // 下一阶段从切换时刻重新计时，避免休息通知后立即触发“回到专注”。
+                self.last_fire.insert(next_kind, self.running_secs);
                 self.phase = target_phase;
                 out.triggered.push(cur_kind);
             }
@@ -459,6 +463,43 @@ mod tests {
             }
         }
         assert!(got_eyes, "未触发 Eyes 提醒");
+    }
+
+    #[test]
+    fn pomodoro_waits_for_each_full_phase_before_notifying() {
+        for (focus_secs, break_secs) in [(13, 4), (4, 13), (4, 4)] {
+            let mut e = Engine::new();
+            let mut cfg = fast_cfg();
+            cfg.reminders.pomodoro_focus_sec = focus_secs;
+            cfg.reminders.pomodoro_break_sec = break_secs;
+            e.apply(Command::Start, &cfg);
+
+            let cycle_secs = focus_secs + break_secs;
+            for elapsed in 1..=cycle_secs * 3 {
+                let actual: Vec<_> = e
+                    .tick(Instant::now(), &cfg)
+                    .triggered
+                    .into_iter()
+                    .filter(|kind| {
+                        matches!(
+                            kind,
+                            ReminderKind::PomodoroBreak | ReminderKind::PomodoroFocus
+                        )
+                    })
+                    .collect();
+                let expected = if elapsed % cycle_secs == focus_secs {
+                    vec![ReminderKind::PomodoroBreak]
+                } else if elapsed % cycle_secs == 0 {
+                    vec![ReminderKind::PomodoroFocus]
+                } else {
+                    vec![]
+                };
+                assert_eq!(
+                    actual, expected,
+                    "focus={focus_secs}, break={break_secs}, elapsed={elapsed}"
+                );
+            }
+        }
     }
 
     #[test]
